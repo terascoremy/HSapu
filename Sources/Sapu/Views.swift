@@ -47,6 +47,12 @@ struct RootView: View {
                 Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1)
                 detail.frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            if state.scanning && state.selection != .overview {
+                VStack {
+                    HStack { Spacer(); ScanPill().padding(.top, 14).padding(.trailing, 22) }
+                    Spacer()
+                }
+            }
             if state.cleaning { CleaningOverlay() }
         }
         .frame(minWidth: 1100, minHeight: 780)
@@ -269,7 +275,9 @@ struct OverviewView: View {
     }
 
     @ViewBuilder var actionBar: some View {
-        if state.hasScanned {
+        if state.scanning {
+            ScanProgress()
+        } else if state.hasScanned {
             HStack(spacing: 12) {
                 PillButton(title: state.scanning ? "Mengimbas" : "Imbas semula", icon: "arrow.clockwise", filled: false) { state.scan() }
                     .disabled(state.scanning)
@@ -599,5 +607,77 @@ struct CleaningOverlay: View {
             .padding(28)
             .background(RoundedRectangle(cornerRadius: 20).fill(Color.black.opacity(0.5)))
         }
+    }
+}
+
+
+// MARK: kemajuan imbasan
+
+struct ScanProgress: View {
+    @EnvironmentObject var state: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small).tint(.white)
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    let secs = Int(ctx.date.timeIntervalSince(state.scanStart ?? ctx.date))
+                    Text("Mengimbas \(state.scanDone) daripada \(state.scanTotal) kategori · \(secs) saat")
+                        .font(.system(size: 13, weight: .semibold)).monospacedDigit()
+                }
+                Spacer()
+                Text("\(Int(state.scanFraction * 100))%").font(.system(size: 13, weight: .semibold)).monospacedDigit()
+            }
+            ScanBar(fraction: state.scanFraction, height: 7)
+            if !state.scanPending.isEmpty {
+                Text("Masih berjalan: " + state.scanPending.joined(separator: ", "))
+                    .font(.system(size: 11.5)).opacity(0.65).lineLimit(2)
+            }
+        }
+        .padding(14)
+        .frame(width: 520)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.1)))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.12), lineWidth: 1))
+    }
+}
+
+struct ScanBar: View {
+    let fraction: Double
+    var height: CGFloat = 6
+    @State private var shimmer = false
+
+    var body: some View {
+        GeometryReader { g in
+            let w = g.size.width * max(0.05, min(1, fraction))
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.15))
+                Capsule().fill(Color.white.opacity(0.92)).frame(width: w)
+                    .overlay(alignment: .trailing) {
+                        // Denyut di hujung bar supaya nampak masih bekerja walaupun peratus tak berubah.
+                        Capsule().fill(Color.white).frame(width: 26).opacity(shimmer ? 0.15 : 0.7)
+                    }
+                    .clipShape(Capsule())
+            }
+            .animation(.easeOut(duration: 0.35), value: fraction)
+        }
+        .frame(height: height)
+        .onAppear { withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { shimmer = true } }
+    }
+}
+
+/// Pil kecil di penjuru atas untuk halaman selain ringkasan.
+struct ScanPill: View {
+    @EnvironmentObject var state: AppState
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small).tint(.white)
+            Text("Mengimbas \(state.scanDone)/\(state.scanTotal)").font(.system(size: 12, weight: .semibold)).monospacedDigit()
+            ScanBar(fraction: state.scanFraction, height: 5).frame(width: 90)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Capsule().fill(Color.black.opacity(0.35)))
+        .overlay(Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1))
     }
 }

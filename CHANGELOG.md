@@ -2,6 +2,10 @@
 
 Setiap kemas kini: naikkan `appVersion` dalam `Sources/Sapu/Version.swift`, tambah entri di sini, commit, kemudian `git tag vX.Y.Z`.
 
+## 1.2.1 — 2026-11-14
+- **Bar kemajuan imbasan:** semasa mengimbas, ringkasan menunjuk bar kemajuan (kategori siap daripada jumlah, peratus, saat berlalu, dan kategori yang masih berjalan). Halaman lain menunjuk pil kecil di penjuru. Sebelum ini butang hanya malap tanpa sebarang tanda kerja.
+- **Imbasan jauh lebih pantas:** saiz folder besar (data simulator, folder home, cache dev, node_modules) dicache 3 jam untuk imbasan di latar dan 15 minit untuk imbasan manual, dan dibatalkan bila item itu dipadam. Diukur: imbasan sejuk ~175 saat (xcode 43, home 110), imbasan seterusnya ~16 saat.
+
 ## 1.2.0 — 2026-11-14
 - **Halaman Sejarah:** setiap tindakan direkod dengan butiran. Kumpulan mengikut hari (jumlah GB dan bilangan item), klik hari untuk lihat setiap tindakan dan item yang dipadam (nama, kategori, cara, saiz). Carta GB sehari, julat 7/30/90 hari atau semua, dan pemilih tarikh untuk lihat berapa GB dipadam pada hari tertentu. Merangkumi pembersih, buang worktree dan tindakan simulator. Rekod lama kekal boleh dibaca (tanpa senarai item).
 - **Pembetulan UI:** bahagian atas dan bawah tetingkap terpotong (butang Imbas dan meter cakera hilang) sebab kandungan lebih tinggi daripada tetingkap. Sidebar kini boleh skrol dengan Sejarah, Tetapan dan meter cakera tetap di bawah, jarak baris diketatkan, tetingkap minimum 1100x780 dan lalai 1240x840.

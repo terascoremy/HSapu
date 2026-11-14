@@ -74,6 +74,11 @@ enum CoreSelfTest {
         SizeCache.put([sizedDir: 123_456_789])
         check("cache saiz: guna nilai segar tanpa du", Scanner.cachedSizes([sizedDir])[sizedDir] == 123_456_789)
         check("cache saiz: nilai lapuk tak dianggap segar", SizeCache.fresh([sizedDir], maxAge: -1).isEmpty && SizeCache.any([sizedDir])[sizedDir] == 123_456_789)
+        SizeCache.put([sizedDir + "/sub": 5, root + "/lain": 7])
+        SizeCache.invalidate(sizedDir + "/sub")
+        let afterInv = SizeCache.any([sizedDir, sizedDir + "/sub", root + "/lain"])
+        check("cache saiz: invalidate buang laluan, induk; kekalkan yang lain", afterInv[sizedDir] == nil && afterInv[sizedDir + "/sub"] == nil && afterInv[root + "/lain"] == 7)
+        SizeCache.put([sizedDir: 123_456_789])
         SizeCache.reset()
         check("cache saiz: kekal selepas dimuat semula dari fail", SizeCache.any([sizedDir])[sizedDir] == 123_456_789)
 
@@ -90,6 +95,14 @@ enum CoreSelfTest {
         } else {
             check("codable: data dalam tindakan kekal", false)
         }
+
+        // pembersihan membatalkan cache saiz untuk item itu
+        let invFile = root + "/inv-file"
+        fm.createFile(atPath: invFile, contents: Data(count: 10))
+        SizeCache.put([invFile: 999, root: 12345])
+        _ = Cleaner.perform(CleanItem(name: "i", path: invFile, detail: "", size: 10, safety: .safe, action: .delete, selected: true))
+        let invAfter = SizeCache.any([invFile, root])
+        check("pembersihan: cache saiz item dan induknya dibatalkan", invAfter[invFile] == nil && invAfter[root] == nil)
 
         // --- Tong Sampah (alih, bukan padam)
         let trashName = "sapu-coretest-" + UUID().uuidString

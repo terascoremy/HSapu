@@ -153,6 +153,7 @@ final class SimState: ObservableObject {
             let r = work()
             await MainActor.run {
                 self.busy = false
+                SizeCache.invalidate(Scanner.home + "/Library/Developer/CoreSimulator")
                 if let e = r.error {
                     self.message = e
                 } else {

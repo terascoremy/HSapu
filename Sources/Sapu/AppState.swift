@@ -16,6 +16,10 @@ final class AppState: ObservableObject {
     @Published var categories: [CleanCategory] = Catalog.blank()
     @Published var selection: Selection = .overview
     @Published var scanning = false
+    @Published var scanDone = 0
+    @Published var scanTotal = 0
+    @Published var scanPending: [String] = []
+    @Published var scanStart: Date?
     @Published var hasScanned = false
     @Published var lastScan: Date?
     @Published var cleaning = false
@@ -52,6 +56,8 @@ final class AppState: ObservableObject {
     var usedFraction: Double {
         diskTotal > 0 ? Double(diskTotal - diskFree) / Double(diskTotal) : 0
     }
+
+    var scanFraction: Double { scanTotal > 0 ? Double(scanDone) / Double(scanTotal) : 0 }
 
     var totalFound: Int64 { categories.reduce(0) { $0 + $1.total } }
     var totalSelected: Int64 { categories.reduce(0) { $0 + $1.selectedSize } }
@@ -111,7 +117,12 @@ final class AppState: ObservableObject {
         }
         let ids = categories.map { $0.id }
         let skip = skipIDs
+        scanDone = 0
+        scanTotal = ids.filter { !skip.contains($0) }.count
+        scanPending = categories.filter { !skip.contains($0.id) }.map { $0.title }
+        scanStart = Date()
         let qos: DispatchQoS.QoSClass = background ? .utility : .userInitiated
+        Scanner.sizeMaxAge = background ? 3 * 3600 : 900
         Task {
             await withTaskGroup(of: (String, [CleanItem]).self) { group in
                 for id in ids {
@@ -126,6 +137,11 @@ final class AppState: ObservableObject {
                 }
                 for await (id, found) in group {
                     guard let i = self.categories.firstIndex(where: { $0.id == id }) else { continue }
+                    if !skip.contains(id) {
+                        self.scanDone += 1
+                        let title = self.categories[i].title
+                        self.scanPending.removeAll { $0 == title }
+                    }
                     // Kekalkan pilihan pengguna untuk item yang sama.
                     var chosen = [String: Bool]()
                     for it in self.categories[i].items { chosen[it.path] = it.selected }
@@ -141,6 +157,7 @@ final class AppState: ObservableObject {
             }
             Dedupe.apply(&self.categories)
             self.scanning = false
+            self.scanPending = []
             self.hasScanned = true
             self.lastScan = Date()
             self.refreshDisk()
@@ -288,6 +305,8 @@ final class AppState: ObservableObject {
         skipIDs = ["big"]
         scan()
         Task {
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            if self.scanning { self.snapshot(dir + "/0-scanning.png") }
             while self.scanning { try? await Task.sleep(nanoseconds: 300_000_000) }
             try? await Task.sleep(nanoseconds: 900_000_000)
             self.snapshot(dir + "/1-overview.png")

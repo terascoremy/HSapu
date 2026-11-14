@@ -169,6 +169,19 @@ enum SizeCache {
         return out
     }
 
+    /// Buang saiz yang jadi lapuk bila `path` diubah: laluan itu, isinya, dan folder induknya.
+    static func invalidate(_ path: String) {
+        lock.lock()
+        var m = ensure()
+        let before = m.count
+        m = m.filter { k, _ in !(k == path || k.hasPrefix(path + "/") || path.hasPrefix(k + "/")) }
+        map = m
+        let changed = m.count != before
+        let snapshot = m
+        lock.unlock()
+        if changed { Store.save(snapshot, file) }
+    }
+
     static func put(_ sizes: [String: Int64]) {
         lock.lock()
         var m = ensure()

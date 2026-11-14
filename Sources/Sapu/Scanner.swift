@@ -79,6 +79,12 @@ enum Scanner {
 
     static func size(_ path: String) -> Int64 { sizes([path])[path] ?? 0 }
 
+    /// Umur maksimum saiz dicache untuk folder besar (Xcode, dev, node_modules, folder home).
+    /// Imbasan di latar guna lebih lama; imbasan manual lebih pendek.
+    static var sizeMaxAge: TimeInterval = 3 * 3600
+
+    static func fastSizes(_ paths: [String]) -> [String: Int64] { cachedSizes(paths, maxAge: sizeMaxAge) }
+
     /// Guna saiz yang dikira dalam `maxAge` terakhir, kira hanya yang belum ada atau lapuk.
     static func cachedSizes(_ paths: [String], maxAge: TimeInterval = 6 * 3600) -> [String: Int64] {
         var result = SizeCache.fresh(paths, maxAge: maxAge)
@@ -132,7 +138,7 @@ enum Scanner {
             ("Data semua simulator", dev + "/CoreSimulator/Devices", "App dan login dalam simulator hilang. Saiz ialah anggaran.", .review, .simulatorErase),
         ]
         let paths = defs.map { $0.1 }.filter { exists($0) }
-        let sz = sizes(paths)
+        let sz = fastSizes(paths)
         var items = [CleanItem]()
         for d in defs {
             let s = sz[d.1] ?? 0
@@ -164,7 +170,7 @@ enum Scanner {
             defs.append(("Emulator " + String(c.dropLast(4)), avd + "/" + c, "Emulator Android, perlu dicipta semula", .review, .delete))
         }
         let paths = defs.map { $0.1 }.filter { exists($0) }
-        let sz = sizes(paths)
+        let sz = fastSizes(paths)
         var items = [CleanItem]()
         for d in defs {
             let s = sz[d.1] ?? 0
@@ -196,7 +202,7 @@ enum Scanner {
             }
         }
         walk(home, 0)
-        let sz = sizes(found)
+        let sz = fastSizes(found)
         return found.compactMap { p in
             let s = sz[p] ?? 0
             guard s >= 50 * MB else { return nil }
@@ -312,7 +318,7 @@ enum Scanner {
                 inner.append((home + "/" + dir + "/" + c, dir + "/" + c, hint))
             }
         }
-        let sz = sizes(top + inner.map { $0.path })
+        let sz = fastSizes(top + inner.map { $0.path })
         let df = DateFormatter()
         df.locale = Locale(identifier: "ms_MY")
         df.dateFormat = "d MMM yyyy"

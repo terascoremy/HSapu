@@ -30,7 +30,9 @@ if cliArgs.contains("--selftest-hub") {
 if cliArgs.contains("--scan") {
     var cats = Catalog.blank()
     for i in cats.indices where cats[i].id != "big" || cliArgs.contains("--big") {
+        let t0 = Date()
         cats[i].items = Scanner.scan(cats[i].id)
+        print(String(format: "   masa %@: %.1f saat", cats[i].id, Date().timeIntervalSince(t0)))
     }
     let before = cats.reduce(Int64(0)) { $0 + $1.total }
     let removed = Dedupe.apply(&cats)

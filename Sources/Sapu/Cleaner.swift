@@ -5,6 +5,17 @@ enum Cleaner {
     /// `toTrash`: alih ke Tong Sampah dan bukannya padam terus, supaya boleh dipulihkan.
     /// Tong Sampah sendiri sentiasa dikosongkan terus.
     static func perform(_ item: CleanItem, toTrash: Bool = false) -> String? {
+        let result = performRaw(item, toTrash: toTrash)
+        if result == nil {
+            // Saiz yang dicache untuk laluan ini kini lapuk.
+            SizeCache.invalidate(item.path)
+            if case .trashList(let paths) = item.action { paths.forEach { SizeCache.invalidate($0) } }
+            if case .simulatorErase = item.action { SizeCache.invalidate(NSHomeDirectory() + "/Library/Developer/CoreSimulator") }
+        }
+        return result
+    }
+
+    private static func performRaw(_ item: CleanItem, toTrash: Bool) -> String? {
         let fm = FileManager.default
         let useTrash = toTrash && item.path != NSHomeDirectory() + "/.Trash"
         func remove(_ path: String) throws {
