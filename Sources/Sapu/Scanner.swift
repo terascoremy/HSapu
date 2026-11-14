@@ -26,7 +26,7 @@ enum Scanner {
     static let MB: Int64 = 1024 * 1024
 
     static func scan(_ id: String) -> [CleanItem] {
-        let items: [CleanItem]
+        var items: [CleanItem]
         switch id {
         case "system": items = system()
         case "xcode": items = xcode()
@@ -38,6 +38,7 @@ enum Scanner {
         case "big": items = bigFiles()
         default: items = []
         }
+        items = ItemMeta.enrich(items)
         if id == "worktree" || id == "downloads" || id == "home" {
             return items.sorted { ($0.safety.rawValue, -$0.size) < ($1.safety.rawValue, -$1.size) }
         }

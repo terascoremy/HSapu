@@ -23,8 +23,11 @@ struct CleanItem: Identifiable, Codable {
     var safety: Safety
     var action: CleanAction
     var selected: Bool
+    var kind: String?
+    var added: Date?
+    var lastUsed: Date?
 
-    enum CodingKeys: String, CodingKey { case name, path, detail, size, safety, action, selected }
+    enum CodingKeys: String, CodingKey { case name, path, detail, size, safety, action, selected, kind, added, lastUsed }
 }
 
 struct Theme: Equatable {

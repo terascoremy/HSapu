@@ -2,6 +2,12 @@
 
 Setiap kemas kini: naikkan `appVersion` dalam `Sources/Sapu/Version.swift`, tambah entri di sini, commit, kemudian `git tag vX.Y.Z`.
 
+## 1.3.0 — 2026-11-14
+- **Tapis dan isih dalam setiap kategori:** carian nama, tapisan jenis fail (Folder, Dokumen, Video, Arkib, Gambar, Pemasang, Audio, Kod dan data, Lain; untuk worktree ikut repo), tapisan tahap keselamatan, dan tapisan umur ("tak digunakan lebih 30, 90, 180 hari atau 1 tahun"). Isih ikut saiz, tarikh ditambah, terakhir digunakan atau nama.
+- **Butiran tarikh pada setiap baris:** "Ditambah" (Spotlight Date Added, jika tiada tarikh dicipta) dan "Digunakan" (Spotlight Last Used, jika tiada tarikh akses atau ubah).
+- **Pilih semua mengikut tapisan:** "Pilih semua (N)" dan "Pilih yang selamat" hanya memilih item yang kelihatan selepas tapisan, kemudian Bersihkan seperti biasa dengan pratonton. Jika ada item terpilih yang tersembunyi oleh tapisan, jumlahnya dipaparkan dengan amaran.
+- Cache imbasan lama masih boleh dibaca (medan baru pilihan).
+
 ## 1.2.2 — 2026-11-14
 - **Kebenaran folder kekal:** `build.sh` kini menandatangani dengan sijil Apple Development dalam Keychain (jika ada) dan bukan ad-hoc. Identiti app sama pada setiap versi, jadi macOS tak lagi minta kebenaran Desktop, Documents, Downloads dan Akses Cakera Penuh selepas setiap kemas kini. Kebenaran diminta sekali lagi pada pemasangan pertama versi ini sahaja.
 

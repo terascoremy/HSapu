@@ -67,6 +67,46 @@ enum CoreSelfTest {
         } else { check("sejarah: rekod lama tanpa item masih boleh dibaca", false) }
         check("sejarah: julat 7 hari bermula 6 hari lalu", HistoryRange.d7.cutoff() == cal.date(byAdding: .day, value: -6, to: today) && HistoryRange.all.cutoff() == nil)
 
+        // --- jenis, tarikh dan tapisan
+        let metaDir = root + "/meta"
+        try? fm.createDirectory(atPath: metaDir + "/folder", withIntermediateDirectories: true)
+        for n in ["a.dmg", "b.zip", "c.mov", "d.pdf", "e.png", "f.unknown", "g"] { fm.createFile(atPath: metaDir + "/" + n, contents: Data(count: 100)) }
+        func mk(_ n: String, size: Int64, safety: Safety = .safe, action: CleanAction = .trash) -> CleanItem {
+            CleanItem(name: n, path: metaDir + "/" + n, detail: "butiran " + n, size: size, safety: safety, action: action, selected: false)
+        }
+        let enriched = ItemMeta.enrich([mk("a.dmg", size: 5), mk("b.zip", size: 4), mk("c.mov", size: 3), mk("d.pdf", size: 2, safety: .review),
+                                        mk("e.png", size: 1), mk("f.unknown", size: 9), mk("g", size: 8), mk("folder", size: 7, safety: .locked),
+                                        mk("wt", size: 6, action: .worktree(repo: "/x/hrwork"))])
+        let kinds = Dictionary(uniqueKeysWithValues: enriched.map { ($0.name, $0.kind ?? "?") })
+        check("jenis fail: pemasang, arkib, video, dokumen, gambar, lain, folder, worktree",
+              kinds["a.dmg"] == "Pemasang" && kinds["b.zip"] == "Arkib" && kinds["c.mov"] == "Video" && kinds["d.pdf"] == "Dokumen"
+              && kinds["e.png"] == "Gambar" && kinds["f.unknown"] == "Lain" && kinds["g"] == "Lain" && kinds["folder"] == "Folder" && kinds["wt"] == "hrwork")
+        let withDates = enriched.first { $0.name == "a.dmg" }
+        check("tarikh: ditambah dan terakhir digunakan diisi untuk fail", withDates?.added != nil && withDates?.lastUsed != nil
+              && abs(withDates!.added!.timeIntervalSinceNow) < 600)
+        var f = ItemFilter()
+        check("tapisan: tiada tapisan pulangkan semua, isih saiz menurun", f.apply(enriched).count == 9 && f.apply(enriched).first?.name == "f.unknown")
+        f.kind = "Pemasang"
+        check("tapisan: ikut jenis", f.apply(enriched).map { $0.name } == ["a.dmg"])
+        f = ItemFilter(); f.query = "ZIP"
+        check("tapisan: carian tak sensitif huruf besar", f.apply(enriched).map { $0.name } == ["b.zip"])
+        f = ItemFilter(); f.safety = .review
+        check("tapisan: ikut tahap keselamatan", f.apply(enriched).map { $0.name } == ["d.pdf"])
+        f = ItemFilter(); f.sort = .name
+        check("tapisan: isih ikut nama", f.apply(enriched).first?.name == "a.dmg" && f.apply(enriched).last?.name == "wt")
+        var old = enriched
+        for i in old.indices { old[i].lastUsed = Date().addingTimeInterval(-86400 * (i % 2 == 0 ? 200 : 5)) }
+        f = ItemFilter(); f.idleDays = 90
+        let idle = f.apply(old)
+        check("tapisan: tak digunakan lebih 90 hari", !idle.isEmpty && idle.allSatisfy { $0.lastUsed! < Date().addingTimeInterval(-86400 * 90) } && idle.count == old.indices.filter { $0 % 2 == 0 }.count)
+        f.sort = .used
+        check("tapisan: isih terakhir digunakan, paling lama dahulu", f.apply(old).count >= 2)
+        check("tapisan: aktif dikesan", f.active && !ItemFilter().active)
+        let oldJSON = #"[{"name":"x","path":"/p","detail":"d","size":1,"safety":0,"action":{"delete":{}},"selected":true}]"#
+        if let d = oldJSON.data(using: .utf8), let o = try? Store.dec.decode([CleanItem].self, from: d) {
+            check("cache lama tanpa jenis dan tarikh masih boleh dibaca", o.count == 1 && o[0].kind == nil && o[0].added == nil)
+        } else { check("cache lama tanpa jenis dan tarikh masih boleh dibaca", false) }
+
         // --- cache saiz
         let sizedDir = root + "/sized"
         try? fm.createDirectory(atPath: sizedDir, withIntermediateDirectories: true)

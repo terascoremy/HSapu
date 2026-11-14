@@ -327,6 +327,12 @@ final class AppState: ObservableObject {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 self.snapshot(dir + "/\(n + 2)-\(s.1).png")
             }
+            self.selection = .category("downloads")
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            self.snapshot(dir + "/9-downloads.png")
+            self.selection = .category("worktree")
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            self.snapshot(dir + "/9b-worktree.png")
             // Halaman sejarah dengan data contoh dalam folder sementara, supaya data sebenar tak disentuh.
             let demo = NSTemporaryDirectory() + "sapu-demo-" + UUID().uuidString
             try? FileManager.default.createDirectory(atPath: demo, withIntermediateDirectories: true)

@@ -420,11 +420,13 @@ struct PillButton: View {
 struct CategoryView: View {
     let categoryID: String
     @EnvironmentObject var state: AppState
+    @State private var filter = ItemFilter()
 
     var body: some View {
         if let cat = state.categories.first(where: { $0.id == categoryID }) {
             VStack(alignment: .leading, spacing: 0) {
                 header(cat)
+                if cat.scanned && !cat.items.isEmpty { filterBar(cat) }
                 Group {
                     if !cat.scanned {
                         placeholder
@@ -477,6 +479,83 @@ struct CategoryView: View {
         }
     }
 
+    func filterBar(_ cat: CleanCategory) -> some View {
+        let shown = filter.apply(cat.items)
+        let kinds = Dictionary(grouping: cat.items, by: { $0.kind ?? "Lain" }).map { ($0.key, $0.value.count) }.sorted { $0.1 > $1.1 }
+        let safeties: [(Safety, String)] = [(.safe, "Selamat"), (.review, "Semak dulu"), (.locked, "Dikunci")]
+            .filter { s in cat.items.contains { $0.safety == s.0 } }
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 12)).opacity(0.6)
+                    TextField("Cari nama", text: $filter.query).textFieldStyle(.plain).font(.system(size: 13))
+                    if !filter.query.isEmpty {
+                        Button { filter.query = "" } label: { Image(systemName: "xmark.circle.fill").opacity(0.6) }.buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(RoundedRectangle(cornerRadius: 9).fill(Color.white.opacity(0.1)))
+                .frame(width: 230)
+                Menu {
+                    Picker("Isih", selection: $filter.sort) {
+                        ForEach(ItemSort.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                } label: { menuLabel("Isih: " + filter.sort.rawValue, "arrow.up.arrow.down") }
+                .menuStyle(.borderlessButton).fixedSize()
+                Menu {
+                    Picker("Umur", selection: $filter.idleDays) {
+                        Text("Semua umur").tag(0)
+                        Text("Tak digunakan > 30 hari").tag(30)
+                        Text("Tak digunakan > 90 hari").tag(90)
+                        Text("Tak digunakan > 180 hari").tag(180)
+                        Text("Tak digunakan > 1 tahun").tag(365)
+                    }
+                } label: { menuLabel(filter.idleDays == 0 ? "Umur: semua" : "Tak digunakan > \(filter.idleDays) hari", "clock") }
+                .menuStyle(.borderlessButton).fixedSize()
+                Spacer()
+                if filter.active {
+                    Button("Set semula tapisan") { let s = filter.sort; filter = ItemFilter(); filter.sort = s }
+                        .buttonStyle(.plain).font(.system(size: 12, weight: .medium)).opacity(0.8)
+                }
+                Text("\(shown.count) daripada \(cat.items.count)").font(.system(size: 12)).opacity(0.6).monospacedDigit()
+            }
+            if kinds.count > 1 || safeties.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        if kinds.count > 1 {
+                            FilterChip(title: "Semua jenis", count: cat.items.count, selected: filter.kind == nil) { filter.kind = nil }
+                            ForEach(kinds, id: \.0) { k in
+                                FilterChip(title: k.0, count: k.1, selected: filter.kind == k.0) { filter.kind = filter.kind == k.0 ? nil : k.0 }
+                            }
+                        }
+                        if kinds.count > 1 && safeties.count > 1 { Rectangle().fill(Color.white.opacity(0.2)).frame(width: 1, height: 18) }
+                        if safeties.count > 1 {
+                            ForEach(safeties, id: \.0.rawValue) { s in
+                                FilterChip(title: s.1, count: cat.items.filter { $0.safety == s.0 }.count, selected: filter.safety == s.0) {
+                                    filter.safety = filter.safety == s.0 ? nil : s.0
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 32)
+        .padding(.bottom, 10)
+    }
+
+    func menuLabel(_ text: String, _ icon: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 11))
+            Text(text).font(.system(size: 12.5, weight: .medium))
+        }
+        .foregroundStyle(Color.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(RoundedRectangle(cornerRadius: 9).fill(Color.white.opacity(0.1)))
+    }
+
     func message(icon: String, title: String, text: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icon).font(.system(size: 40, weight: .semibold)).opacity(0.9)
@@ -486,9 +565,13 @@ struct CategoryView: View {
     }
 
     func list(_ cat: CleanCategory) -> some View {
-        ScrollView {
+        let shown = filter.apply(cat.items)
+        return ScrollView {
             LazyVStack(spacing: 8) {
-                ForEach(cat.items) { item in
+                if shown.isEmpty {
+                    Text("Tiada item yang sepadan dengan tapisan.").font(.system(size: 13)).opacity(0.65).padding(.top, 30)
+                }
+                ForEach(shown) { item in
                     ItemRow(item: item, toggle: { state.toggle(categoryID, item.id) }, exclude: { state.exclude(item.path) })
                 }
             }
@@ -498,18 +581,22 @@ struct CategoryView: View {
     }
 
     func bottom(_ cat: CleanCategory) -> some View {
-        HStack(spacing: 10) {
+        let visible = Set(filter.apply(cat.items).map { $0.id })
+        let selectable = filter.apply(cat.items).filter { $0.safety != .locked }
+        let hidden = cat.selectedItems.filter { !visible.contains($0.id) }.count
+        return HStack(spacing: 10) {
             PillButton(title: "Pilih yang selamat", icon: "checkmark.shield", filled: false) {
-                state.select(categoryID) { $0.safety == .safe }
+                state.select(categoryID) { visible.contains($0.id) && $0.safety == .safe }
             }
-            PillButton(title: "Pilih semua", icon: "checklist", filled: false) {
-                state.select(categoryID) { _ in true }
+            PillButton(title: filter.active ? "Pilih semua (\(selectable.count))" : "Pilih semua", icon: "checklist", filled: false) {
+                state.select(categoryID) { visible.contains($0.id) }
             }
             PillButton(title: "Kosongkan", icon: "xmark", filled: false) {
                 state.select(categoryID) { _ in false }
             }
             Spacer()
-            Text("\(cat.selectedItems.count) dipilih").font(.system(size: 13)).opacity(0.75)
+            Text("\(cat.selectedItems.count) dipilih" + (hidden > 0 ? " (\(hidden) tersembunyi oleh tapisan)" : ""))
+                .font(.system(size: 13)).opacity(hidden > 0 ? 0.95 : 0.75).foregroundStyle(hidden > 0 ? warnColor : Color.white)
             PillButton(title: cat.selectedSize > 0 ? "Bersihkan \(fmt(cat.selectedSize))" : "Bersihkan",
                        icon: "sparkles", filled: true, tint: cat.theme.a) { state.requestClean(categoryID: categoryID) }
                 .disabled(cat.selectedItems.isEmpty || state.scanning)
@@ -519,6 +606,13 @@ struct CategoryView: View {
         .padding(.vertical, 16)
         .background(Color.black.opacity(0.22))
     }
+}
+
+func shortDate(_ d: Date) -> String {
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "ms_MY")
+    f.dateFormat = "d MMM yyyy"
+    return f.string(from: d)
 }
 
 struct ItemRow: View {
@@ -541,6 +635,11 @@ struct ItemRow: View {
                     Text(item.detail).font(.system(size: 11.5)).opacity(0.65).lineLimit(1).truncationMode(.middle)
                 }
                 Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(item.added.map { "Ditambah " + shortDate($0) } ?? "Ditambah -")
+                    Text(item.lastUsed.map { "Digunakan " + ago($0) } ?? "Digunakan -")
+                }
+                .font(.system(size: 11)).opacity(0.6).lineLimit(1).frame(width: 150, alignment: .trailing)
                 SafetyChip(safety: item.safety)
                 Text(fmt(item.size)).font(.system(size: 13.5, weight: .semibold)).monospacedDigit().frame(width: 84, alignment: .trailing)
             }
