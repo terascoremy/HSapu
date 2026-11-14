@@ -46,11 +46,25 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# SIGN_ID kosong = tanda tangan ad-hoc. Dengan Developer ID: hardened runtime, sedia untuk notarize.
-if [ -n "${SIGN_ID:-}" ]; then
+# Tanda tangan. Identiti yang SAMA pada setiap versi membuat macOS ingat kebenaran folder
+# (Desktop, Documents, Downloads, Akses Cakera Penuh). Tanda tangan ad-hoc berubah setiap
+# binaan, jadi kebenaran diminta semula setiap kali.
+#   SIGN_ID="Nama sijil"  guna sijil itu (Developer ID juga dapat hardened runtime + timestamp)
+#   SIGN_ID=-             paksa ad-hoc
+#   (kosong)              cari sijil "Apple Development" dalam Keychain, jika tiada guna ad-hoc
+if [ -z "${SIGN_ID:-}" ]; then
+  SIGN_ID=$(security find-identity -v -p codesigning | grep -m1 "Apple Development" | sed -E 's/.*"(.*)".*/\1/' || true)
+  SIGN_ID="${SIGN_ID:--}"
+fi
+if [ "$SIGN_ID" = "-" ]; then
+  echo "Tanda tangan: ad-hoc (kebenaran folder akan diminta semula selepas setiap kemas kini)"
+  codesign --force --deep --sign - "$APP"
+elif [[ "$SIGN_ID" == Developer\ ID* ]]; then
+  echo "Tanda tangan: $SIGN_ID (hardened runtime)"
   codesign --force --deep --options runtime --timestamp --sign "$SIGN_ID" "$APP"
 else
-  codesign --force --deep --sign - "$APP"
+  echo "Tanda tangan: $SIGN_ID"
+  codesign --force --deep --timestamp=none --sign "$SIGN_ID" "$APP"
 fi
 
 STAGE="$(mktemp -d)"

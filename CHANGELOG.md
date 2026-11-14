@@ -2,6 +2,9 @@
 
 Setiap kemas kini: naikkan `appVersion` dalam `Sources/Sapu/Version.swift`, tambah entri di sini, commit, kemudian `git tag vX.Y.Z`.
 
+## 1.2.2 — 2026-11-14
+- **Kebenaran folder kekal:** `build.sh` kini menandatangani dengan sijil Apple Development dalam Keychain (jika ada) dan bukan ad-hoc. Identiti app sama pada setiap versi, jadi macOS tak lagi minta kebenaran Desktop, Documents, Downloads dan Akses Cakera Penuh selepas setiap kemas kini. Kebenaran diminta sekali lagi pada pemasangan pertama versi ini sahaja.
+
 ## 1.2.1 — 2026-11-14
 - **Bar kemajuan imbasan:** semasa mengimbas, ringkasan menunjuk bar kemajuan (kategori siap daripada jumlah, peratus, saat berlalu, dan kategori yang masih berjalan). Halaman lain menunjuk pil kecil di penjuru. Sebelum ini butang hanya malap tanpa sebarang tanda kerja.
 - **Imbasan jauh lebih pantas:** saiz folder besar (data simulator, folder home, cache dev, node_modules) dicache 3 jam untuk imbasan di latar dan 15 minit untuk imbasan manual, dan dibatalkan bila item itu dipadam. Diukur: imbasan sejuk ~175 saat (xcode 43, home 110), imbasan seterusnya ~16 saat.
