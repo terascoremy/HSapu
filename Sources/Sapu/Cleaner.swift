@@ -2,19 +2,25 @@ import Foundation
 
 enum Cleaner {
     /// Returns nil on success, or a short error message.
-    static func perform(_ item: CleanItem) -> String? {
+    /// `toTrash`: alih ke Tong Sampah dan bukannya padam terus, supaya boleh dipulihkan.
+    /// Tong Sampah sendiri sentiasa dikosongkan terus.
+    static func perform(_ item: CleanItem, toTrash: Bool = false) -> String? {
         let fm = FileManager.default
+        let useTrash = toTrash && item.path != NSHomeDirectory() + "/.Trash"
+        func remove(_ path: String) throws {
+            if useTrash { try fm.trashItem(at: URL(fileURLWithPath: path), resultingItemURL: nil) } else { try fm.removeItem(atPath: path) }
+        }
         do {
             switch item.action {
             case .delete:
-                try fm.removeItem(atPath: item.path)
+                try remove(item.path)
                 if item.path.hasSuffix(".avd") {
-                    try? fm.removeItem(atPath: String(item.path.dropLast(4)) + ".ini")
+                    try? remove(String(item.path.dropLast(4)) + ".ini")
                 }
             case .deleteContents:
                 var failed = 0
                 for c in try fm.contentsOfDirectory(atPath: item.path) {
-                    do { try fm.removeItem(atPath: item.path + "/" + c) } catch { failed += 1 }
+                    do { try remove(item.path + "/" + c) } catch { failed += 1 }
                 }
                 if failed > 0 { return "\(item.name): \(failed) item tak dapat dipadam" }
             case .trash:

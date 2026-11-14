@@ -2,7 +2,8 @@
 # Bina Sapu.app dan Sapu-$VERSION.dmg ke dalam dist/
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION="1.0.0"
+VERSION=$(grep -o '"[0-9][0-9.]*"' Sources/Sapu/Version.swift | head -1 | tr -d '"')
+[ -n "$VERSION" ] || { echo "Versi tak dijumpai dalam Version.swift"; exit 1; }
 APP="dist/Sapu.app"
 
 swift build -c release
@@ -45,7 +46,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-codesign --force --deep --sign - "$APP"
+# SIGN_ID kosong = tanda tangan ad-hoc. Dengan Developer ID: hardened runtime, sedia untuk notarize.
+if [ -n "${SIGN_ID:-}" ]; then
+  codesign --force --deep --options runtime --timestamp --sign "$SIGN_ID" "$APP"
+else
+  codesign --force --deep --sign - "$APP"
+fi
 
 STAGE="$(mktemp -d)"
 cp -R "$APP" "$STAGE/"

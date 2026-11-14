@@ -157,7 +157,7 @@ struct WorktreesView: View {
             }
     }
 
-    var bulk: [WorktreeInfo] { shown.filter { $0.safeToRemove } }
+    var bulk: [WorktreeInfo] { shown.filter { $0.safeToRemove && !Exclusions.isExcluded($0.path) } }
     var bulkSize: Int64 { bulk.reduce(0) { $0 + ($1.size ?? 0) } }
     var totalSize: Int64 { hub.worktrees.reduce(0) { $0 + ($1.size ?? 0) } }
     var sizesReady: Bool { !hub.worktrees.isEmpty && !hub.worktrees.contains { $0.size == nil } }
@@ -192,14 +192,15 @@ struct WorktreesView: View {
             bottom
         }
         .alert("Buang \(bulk.count) worktree?", isPresented: $confirmBulk) {
+            let list = bulk
             Button("Batal", role: .cancel) {}
-            Button("Buang", role: .destructive) { hub.remove(bulk) }
+            Button("Buang", role: .destructive) { hub.remove(list) }
         } message: {
             Text("Semuanya dah merge dan bersih. Folder dibuang, branch kekal dalam repo.")
         }
         .alert("Buang worktree ini?", isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
             Button("Batal", role: .cancel) {}
-            Button("Buang", role: .destructive) { if let p = pending { hub.remove([p]) } }
+            if let p = pending { Button("Buang", role: .destructive) { hub.remove([p]) } }
         } message: {
             Text(pending.map { "\($0.name) dalam \($0.repoName). Branch kekal dalam repo." } ?? "")
         }
@@ -245,6 +246,9 @@ struct WorktreesView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.07)))
+        .contextMenu {
+            Button("Jangan sentuh worktree ini") { hub.exclude(w) }
+        }
     }
 
     func detail(_ w: WorktreeInfo) -> String {
@@ -404,7 +408,7 @@ struct DevView: View {
     @EnvironmentObject var hub: HubState
     @EnvironmentObject var state: AppState
 
-    var low: Bool { state.diskFree < 50 * 1_073_741_824 }
+    var low: Bool { state.diskFree < Int64(Prefs.lowDiskGB) * 1_000_000_000 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -418,7 +422,7 @@ struct DevView: View {
                         Panel {
                             HStack(spacing: 10) {
                                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(warnColor)
-                                Text("Ruang disk tinggal kurang 50 GB. Buka Pembersih untuk bebaskan ruang.").font(.system(size: 13.5, weight: .medium))
+                                Text("Ruang disk tinggal kurang \(Prefs.lowDiskGB) GB. Buka Pembersih untuk bebaskan ruang.").font(.system(size: 13.5, weight: .medium))
                                 Spacer()
                                 PillButton(title: "Buka Pembersih", icon: "sparkles", filled: false) { state.selection = .overview }
                             }
@@ -541,11 +545,15 @@ struct MenuBarContent: View {
                 Text("Sapu").font(.system(size: 14, weight: .bold, design: .rounded))
                 Spacer()
             }
-            line("internaldrive", "\(fmt(state.diskFree)) kosong", state.diskFree < 50 * 1_073_741_824 ? badColor : nil) { go(.overview) }
+            line("internaldrive", "\(fmt(state.diskFree)) kosong", state.diskFree < Int64(Prefs.lowDiskGB) * 1_000_000_000 ? badColor : nil) { go(.overview) }
             line("play.circle", "\(hub.runnersUp) daripada \(hub.runners.count) runner CI berjalan", nil) { go(.dev) }
             line("arrow.triangle.branch", hub.worktrees.isEmpty ? "Worktree belum diimbas" : "\(hub.attentionCount) worktree perlu perhatian, \(hub.safeWorktrees.count) boleh dibuang",
                  hub.attentionCount > 0 ? warnColor : nil) { go(.worktrees) }
             line("shippingbox", "\(hub.apps.count) app dijejak", nil) { go(.builds) }
+            line("iphone.gen3", "\(hub.bootedSims) simulator hidup", hub.bootedSims > 0 ? warnColor : nil) { go(.simulators) }
+            if let u = state.update {
+                line("arrow.down.circle", "Sapu \(u.version) tersedia", okColor) { go(.settings) }
+            }
             Divider()
             HStack {
                 Button("Buka Sapu") { go(.overview) }

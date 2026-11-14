@@ -7,6 +7,11 @@ if cliArgs.contains("--selftest") {
     exit(0)
 }
 
+if cliArgs.contains("--selftest-core") {
+    CoreSelfTest.run()
+    exit(0)
+}
+
 if cliArgs.contains("--selftest-hub") {
     HubSelfTest.run()
     exit(0)

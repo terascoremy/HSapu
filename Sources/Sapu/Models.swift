@@ -1,11 +1,11 @@
 import Foundation
 import SwiftUI
 
-enum Safety: Int {
+enum Safety: Int, Codable {
     case safe, review, locked
 }
 
-enum CleanAction {
+enum CleanAction: Codable {
     case delete
     case deleteContents
     case trash
@@ -14,8 +14,8 @@ enum CleanAction {
     case simulatorErase
 }
 
-struct CleanItem: Identifiable {
-    let id = UUID()
+struct CleanItem: Identifiable, Codable {
+    var id = UUID()
     var name: String
     var path: String
     var detail: String
@@ -23,6 +23,8 @@ struct CleanItem: Identifiable {
     var safety: Safety
     var action: CleanAction
     var selected: Bool
+
+    enum CodingKeys: String, CodingKey { case name, path, detail, size, safety, action, selected }
 }
 
 struct Theme: Equatable {
@@ -55,6 +57,8 @@ enum Selection: Hashable {
     case worktrees
     case builds
     case dev
+    case simulators
+    case settings
     case category(String)
 }
 

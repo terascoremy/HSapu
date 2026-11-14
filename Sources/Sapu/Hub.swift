@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: models
 
-struct WorktreeInfo: Identifiable {
+struct WorktreeInfo: Identifiable, Codable {
     var id: String { path }
     let repoName: String
     let repoPath: String
@@ -22,13 +22,13 @@ struct WorktreeInfo: Identifiable {
     var safeToRemove: Bool { removable && merged }
 }
 
-struct CIStatus {
+struct CIStatus: Codable {
     let state: String
     let title: String
     let when: Date?
 }
 
-struct BuildApp: Identifiable {
+struct BuildApp: Identifiable, Codable {
     var id: String { dir }
     let name: String
     let dir: String
@@ -393,13 +393,27 @@ final class HubState: ObservableObject {
                 checklists[String(key.dropFirst("sapu.checklist.".count))] = v
             }
         }
+        if let snap = Store.load(HubSnapshot.self, "hub-cache.json") {
+            let fm = FileManager.default
+            worktrees = snap.worktrees.filter { fm.fileExists(atPath: $0.path) }
+            apps = snap.apps
+        }
         timer = Timer.scheduledTimer(withTimeInterval: 8, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshLive() }
         }
     }
 
     var attentionCount: Int { worktrees.filter { $0.needsAttention }.count }
-    var safeWorktrees: [WorktreeInfo] { worktrees.filter { $0.safeToRemove } }
+    var safeWorktrees: [WorktreeInfo] { worktrees.filter { $0.safeToRemove && !Exclusions.isExcluded($0.path) } }
+
+    func exclude(_ w: WorktreeInfo) {
+        Exclusions.add(w.path)
+        objectWillChange.send()
+    }
+
+    func saveCache() {
+        Store.save(HubSnapshot(date: Date(), worktrees: worktrees, apps: apps), "hub-cache.json")
+    }
     var runnersUp: Int { runners.filter { $0.running }.count }
 
     func refreshAll() {
@@ -411,15 +425,21 @@ final class HubState: ObservableObject {
     func loadWorktrees() {
         guard !loadingWT else { return }
         loadingWT = true
+        let known = Dictionary(worktrees.compactMap { w in w.size.map { (w.path, $0) } }, uniquingKeysWith: { a, _ in a })
         Task.detached(priority: .userInitiated) {
-            let list = HubScan.worktrees()
+            var list = HubScan.worktrees()
+            // Papar saiz lama serta-merta (walaupun lapuk) supaya tak perlu tunggu `du`.
+            let old = SizeCache.any(list.map { $0.path })
+            for i in list.indices { list[i].size = known[list[i].path] ?? old[list[i].path] }
+            let shown = list
             await MainActor.run {
-                self.worktrees = list
+                self.worktrees = shown
                 self.loadingWT = false
             }
-            let sizes = Scanner.sizes(list.map { $0.path })
+            let sizes = Scanner.cachedSizes(list.map { $0.path })
             await MainActor.run {
-                for i in self.worktrees.indices { self.worktrees[i].size = sizes[self.worktrees[i].path] }
+                for i in self.worktrees.indices { self.worktrees[i].size = sizes[self.worktrees[i].path] ?? self.worktrees[i].size }
+                self.saveCache()
             }
         }
     }
@@ -443,8 +463,10 @@ final class HubState: ObservableObject {
                     lock.unlock()
                 }
             }
+            let finalStatus = status
             await MainActor.run {
-                for i in self.apps.indices { self.apps[i].ci = status[self.apps[i].repoPath] }
+                for i in self.apps.indices { self.apps[i].ci = finalStatus[self.apps[i].repoPath] }
+                self.saveCache()
             }
         }
     }
@@ -504,10 +526,14 @@ final class HubState: ObservableObject {
                 let item = CleanItem(name: w.name, path: w.path, detail: "", size: 0, safety: .safe, action: .worktree(repo: w.repoPath), selected: true)
                 if let e = Cleaner.perform(item) { errors.append(e) } else { done.append(w.path) }
             }
+            let freed = list.filter { done.contains($0.path) }.reduce(Int64(0)) { $0 + ($1.size ?? 0) }
+            History.record(freed: freed, count: done.count, note: "Worktree")
+            let removed = done, failures = errors
             await MainActor.run {
-                self.worktrees.removeAll { done.contains($0.path) }
+                self.worktrees.removeAll { removed.contains($0.path) }
+                self.saveCache()
                 self.busy = false
-                self.message = errors.isEmpty ? "\(done.count) worktree dibuang. Branch kekal." : errors.prefix(3).joined(separator: "\n")
+                self.message = failures.isEmpty ? "\(removed.count) worktree dibuang. Branch kekal." : failures.prefix(3).joined(separator: "\n")
             }
         }
     }
@@ -529,6 +555,7 @@ final class HubState: ObservableObject {
 
 func ago(_ d: Date?) -> String {
     guard let d else { return "tarikh tak diketahui" }
+    if abs(d.timeIntervalSinceNow) < 60 { return "baru sebentar tadi" }
     let f = RelativeDateTimeFormatter()
     f.locale = Locale(identifier: "ms_MY")
     f.unitsStyle = .short

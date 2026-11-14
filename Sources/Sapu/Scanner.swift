@@ -79,6 +79,18 @@ enum Scanner {
 
     static func size(_ path: String) -> Int64 { sizes([path])[path] ?? 0 }
 
+    /// Guna saiz yang dikira dalam `maxAge` terakhir, kira hanya yang belum ada atau lapuk.
+    static func cachedSizes(_ paths: [String], maxAge: TimeInterval = 6 * 3600) -> [String: Int64] {
+        var result = SizeCache.fresh(paths, maxAge: maxAge)
+        let missing = paths.filter { result[$0] == nil }
+        if !missing.isEmpty {
+            let fresh = sizes(missing)
+            SizeCache.put(fresh)
+            for (k, v) in fresh { result[k] = v }
+        }
+        return result
+    }
+
     // MARK: system
 
     static func system() -> [CleanItem] {
@@ -231,7 +243,7 @@ enum Scanner {
                 }
             }
         }
-        let sz = sizes(entries.map { $0.path })
+        let sz = cachedSizes(entries.map { $0.path })
         let lock = NSLock()
         var items = [CleanItem]()
         DispatchQueue.concurrentPerform(iterations: entries.count) { i in

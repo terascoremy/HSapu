@@ -1,31 +1,50 @@
 import AppKit
 import SwiftUI
 
+struct PendingClean: Identifiable {
+    let id = UUID()
+    let categoryID: String?
+    let title: String
+    let groups: [(title: String, items: [CleanItem])]
+
+    var count: Int { groups.reduce(0) { $0 + $1.items.count } }
+    var total: Int64 { groups.reduce(0) { $0 + $1.items.reduce(0) { $0 + $1.size } } }
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var categories: [CleanCategory] = Catalog.blank()
     @Published var selection: Selection = .overview
     @Published var scanning = false
     @Published var hasScanned = false
+    @Published var lastScan: Date?
     @Published var cleaning = false
     @Published var cleanProgress: Double = 0
     @Published var cleanLabel = ""
     @Published var lastFreed: Int64?
+    @Published var lastWasTrash = false
     @Published var errors: [String] = []
     @Published var showErrors = false
+    @Published var pending: PendingClean?
     @Published var diskTotal: Int64 = 0
     @Published var diskFree: Int64 = 0
+    @Published var update: UpdateInfo?
 
     var skipIDs: Set<String> = []
+    private var timer: Timer?
 
-    init() { refreshDisk() }
+    init() {
+        refreshDisk()
+        loadCache()
+    }
 
     var theme: Theme {
         switch selection {
-        case .overview: return .overview
+        case .overview, .settings: return .overview
         case .worktrees: return .worktrees
         case .builds: return .builds
         case .dev: return .dev
+        case .simulators: return .sims
         case .category(let id): return categories.first { $0.id == id }?.theme ?? .overview
         }
     }
@@ -47,43 +66,86 @@ final class AppState: ObservableObject {
         }
     }
 
+    // MARK: cache
+
+    /// Papar hasil imbasan terakhir serta-merta, supaya tak perlu tunggu imbasan baru.
+    func loadCache() {
+        guard let snap = Store.load(ScanSnapshot.self, "scan-cache.json") else { return }
+        let fm = FileManager.default
+        for i in categories.indices {
+            guard let items = snap.items[categories[i].id] else { continue }
+            // Buang item yang sudah tiada di cakera sejak imbasan terakhir.
+            categories[i].items = Exclusions.filter(items).filter { fm.fileExists(atPath: $0.path) }
+            categories[i].scanned = true
+        }
+        hasScanned = true
+        lastScan = snap.date
+    }
+
+    func saveCache() {
+        guard skipIDs.isEmpty else { return }
+        var dict = [String: [CleanItem]]()
+        for c in categories where c.scanned { dict[c.id] = c.items }
+        Store.save(ScanSnapshot(date: lastScan ?? Date(), items: dict), "scan-cache.json")
+    }
+
+    var cacheAge: TimeInterval? { lastScan.map { Date().timeIntervalSince($0) } }
+
+    /// Dipanggil bila app dibuka: imbas senyap di latar jika data lebih 30 minit.
+    func autoRefresh() {
+        if let age = cacheAge, age < 1800 { return }
+        scan(background: true)
+    }
+
     // MARK: scan
 
-    func scan() {
+    func scan(background: Bool = false, completion: ((Int64) -> Void)? = nil) {
         guard !scanning, !cleaning else { return }
         scanning = true
-        lastFreed = nil
-        for i in categories.indices {
-            categories[i].items = []
-            categories[i].scanned = false
+        if !background { lastFreed = nil }
+        if !hasScanned {
+            for i in categories.indices {
+                categories[i].items = []
+                categories[i].scanned = false
+            }
         }
         let ids = categories.map { $0.id }
         let skip = skipIDs
+        let qos: DispatchQoS.QoSClass = background ? .utility : .userInitiated
         Task {
             await withTaskGroup(of: (String, [CleanItem]).self) { group in
                 for id in ids {
                     group.addTask {
                         if skip.contains(id) { return (id, []) }
                         return await withCheckedContinuation { cont in
-                            DispatchQueue.global(qos: .userInitiated).async {
+                            DispatchQueue.global(qos: qos).async {
                                 cont.resume(returning: (id, Scanner.scan(id)))
                             }
                         }
                     }
                 }
-                for await (id, items) in group {
-                    if let i = self.categories.firstIndex(where: { $0.id == id }) {
-                        withAnimation(.easeOut(duration: 0.25)) {
-                            self.categories[i].items = items
-                            self.categories[i].scanned = true
-                        }
+                for await (id, found) in group {
+                    guard let i = self.categories.firstIndex(where: { $0.id == id }) else { continue }
+                    // Kekalkan pilihan pengguna untuk item yang sama.
+                    var chosen = [String: Bool]()
+                    for it in self.categories[i].items { chosen[it.path] = it.selected }
+                    var items = Exclusions.filter(found)
+                    for j in items.indices {
+                        if let s = chosen[items[j].path] { items[j].selected = s && items[j].safety != .locked }
+                    }
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        self.categories[i].items = items
+                        self.categories[i].scanned = true
                     }
                 }
             }
             Dedupe.apply(&self.categories)
             self.scanning = false
             self.hasScanned = true
+            self.lastScan = Date()
             self.refreshDisk()
+            self.saveCache()
+            completion?(self.totalFound)
         }
     }
 
@@ -104,9 +166,31 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Tambah ke senarai jangan sentuh dan keluarkan dari senarai semasa.
+    func exclude(_ path: String) {
+        Exclusions.add(path)
+        for c in categories.indices {
+            categories[c].items.removeAll { Exclusions.isExcluded($0.path) }
+        }
+        saveCache()
+    }
+
     // MARK: clean
 
-    func clean(categoryID: String?) {
+    /// Buka lembaran pratonton. Pembersihan hanya bermula selepas pengguna sahkan.
+    func requestClean(categoryID: String?) {
+        guard !cleaning, !scanning else { return }
+        var groups = [(title: String, items: [CleanItem])]()
+        for c in categories where categoryID == nil || c.id == categoryID {
+            let sel = c.selectedItems
+            if !sel.isEmpty { groups.append((c.title, sel)) }
+        }
+        guard !groups.isEmpty else { return }
+        let title = categoryID.flatMap { id in categories.first { $0.id == id }?.title } ?? "Semua kategori"
+        pending = PendingClean(categoryID: categoryID, title: title, groups: groups)
+    }
+
+    func clean(categoryID: String?, toTrash: Bool = false) {
         guard !cleaning, !scanning else { return }
         var work = [(cat: String, item: CleanItem)]()
         for c in categories where categoryID == nil || c.id == categoryID {
@@ -118,17 +202,19 @@ final class AppState: ObservableObject {
         errors = []
         Task {
             var freed: Int64 = 0
+            var done = 0
             for (n, w) in work.enumerated() {
                 self.cleanLabel = w.item.name
                 let err: String? = await withCheckedContinuation { cont in
                     DispatchQueue.global(qos: .userInitiated).async {
-                        cont.resume(returning: Cleaner.perform(w.item))
+                        cont.resume(returning: Cleaner.perform(w.item, toTrash: toTrash))
                     }
                 }
                 if let err {
                     self.errors.append(err)
                 } else {
                     freed += w.item.size
+                    done += 1
                     if let c = self.categories.firstIndex(where: { $0.id == w.cat }) {
                         self.categories[c].items.removeAll { $0.id == w.item.id }
                     }
@@ -137,14 +223,64 @@ final class AppState: ObservableObject {
             }
             self.cleaning = false
             self.lastFreed = freed
+            self.lastWasTrash = toTrash
             self.refreshDisk()
             self.showErrors = !self.errors.isEmpty
+            self.saveCache()
+            History.record(freed: freed, count: done, note: toTrash ? "Pembersih (ke Tong Sampah)" : "Pembersih")
+        }
+    }
+
+    // MARK: pemantauan latar belakang
+
+    func startMonitor() {
+        guard timer == nil else { return }
+        timer = Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.tick() }
+        }
+        tick()
+        checkUpdatesIfDue()
+    }
+
+    func tick() {
+        refreshDisk()
+        if Prefs.lowDiskAlert, diskFree < Int64(Prefs.lowDiskGB) * 1_000_000_000,
+           Prefs.lastLowDiskNotice.map({ Date().timeIntervalSince($0) > 86400 }) ?? true {
+            Prefs.lastLowDiskNotice = Date()
+            Notifier.send("Ruang cakera rendah", "Tinggal \(fmt(diskFree)). Buka Sapu untuk bersihkan.")
+        }
+        let days = Prefs.scanEveryDays
+        if days > 0, !scanning, !cleaning,
+           Prefs.lastAutoScan.map({ Date().timeIntervalSince($0) > Double(days) * 86400 }) ?? true {
+            Prefs.lastAutoScan = Date()
+            scan(background: true) { found in
+                if found > 0 { Notifier.send("Sapu jumpa \(fmt(found)) boleh dibersihkan", "Buka Sapu untuk semak dan bersihkan.") }
+            }
+        }
+    }
+
+    // MARK: kemas kini
+
+    func checkUpdatesIfDue() {
+        guard Prefs.checkUpdates else { return }
+        if let last = Prefs.lastUpdateCheck, Date().timeIntervalSince(last) < 86400 { return }
+        checkUpdates()
+    }
+
+    func checkUpdates(completion: ((UpdateResult) -> Void)? = nil) {
+        Task.detached(priority: .utility) {
+            let r = Updater.check()
+            await MainActor.run {
+                Prefs.lastUpdateCheck = Date()
+                if case .available(let info) = r { self.update = info } else { self.update = nil }
+                completion?(r)
+            }
         }
     }
 
     // MARK: debug snapshots
 
-    func runShots(to dir: String, hub: HubState) {
+    func runShots(to dir: String, hub: HubState, sims: SimState) {
         skipIDs = ["big"]
         scan()
         Task {
@@ -152,19 +288,37 @@ final class AppState: ObservableObject {
             try? await Task.sleep(nanoseconds: 900_000_000)
             self.snapshot(dir + "/1-overview.png")
             hub.refreshAll()
-            try? await Task.sleep(nanoseconds: 90_000_000_000)
-            let shots: [(Selection, String)] = [(.worktrees, "worktrees"), (.builds, "builds"), (.dev, "dev")]
+            sims.refresh()
+            // Tunggu sehingga hub siap (had 150 saat).
+            var waited = 0.0
+            while waited < 150 {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                waited += 0.5
+                let hubDone = !hub.loadingWT && !hub.loadingApps && !hub.worktrees.contains { $0.size == nil }
+                if hubDone && !sims.loading && !sims.sizing { break }
+            }
+            let shots: [(Selection, String)] = [(.worktrees, "worktrees"), (.builds, "builds"), (.dev, "dev"),
+                                                (.simulators, "simulators"), (.settings, "settings")]
             for (n, s) in shots.enumerated() {
                 self.selection = s.0
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 self.snapshot(dir + "/\(n + 2)-\(s.1).png")
             }
-            NSApp.terminate(nil)
+            if let c = self.categories.first(where: { !$0.selectedItems.isEmpty }) {
+                self.selection = .category(c.id)
+                self.requestClean(categoryID: c.id)
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                self.snapshot(dir + "/7-preview.png")
+                self.pending = nil
+            }
+            exit(0)
         }
     }
 
     func snapshot(_ path: String) {
-        guard let w = NSApp.windows.first(where: { $0.isVisible }), let v = w.contentView,
+        // Lembaran (sheet) ialah tetingkap berasingan; ambil tetingkap paling atas yang kelihatan.
+        let wins = NSApp.windows.filter { $0.isVisible && $0.contentView != nil }
+        guard let w = wins.last(where: { $0.isSheet }) ?? wins.first(where: { $0.isVisible }), let v = w.contentView,
               let rep = v.bitmapImageRepForCachingDisplay(in: v.bounds) else { return }
         v.cacheDisplay(in: v.bounds, to: rep)
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))

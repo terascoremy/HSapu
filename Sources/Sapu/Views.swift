@@ -4,17 +4,22 @@ import SwiftUI
 struct SapuApp: App {
     @StateObject private var state = AppState()
     @StateObject private var hub = HubState()
+    @StateObject private var sims = SimState()
 
     var body: some Scene {
         WindowGroup(id: "main") {
             RootView()
                 .environmentObject(state)
                 .environmentObject(hub)
+                .environmentObject(sims)
                 .onAppear {
                     hub.refreshAll()
                     let args = CommandLine.arguments
                     if let i = args.firstIndex(of: "--shot"), i + 1 < args.count {
-                        state.runShots(to: args[i + 1], hub: hub)
+                        state.runShots(to: args[i + 1], hub: hub, sims: sims)
+                    } else {
+                        state.autoRefresh()
+                        state.startMonitor()
                     }
                 }
         }
@@ -22,7 +27,7 @@ struct SapuApp: App {
         .windowResizability(.contentMinSize)
 
         MenuBarExtra {
-            MenuBarContent().environmentObject(state).environmentObject(hub)
+            MenuBarContent().environmentObject(state).environmentObject(hub).environmentObject(sims)
         } label: {
             Image(systemName: "sparkles")
         }
@@ -46,6 +51,7 @@ struct RootView: View {
         .frame(minWidth: 1120, minHeight: 700)
         .foregroundStyle(.white)
         .ignoresSafeArea()
+        .sheet(item: $state.pending) { p in CleanSheet(p: p) }
         .alert("Ada item tak dapat dibersihkan", isPresented: $state.showErrors) {
             Button("OK") {}
         } message: {
@@ -59,6 +65,8 @@ struct RootView: View {
         case .worktrees: WorktreesView()
         case .builds: BuildsView()
         case .dev: DevView()
+        case .simulators: SimView()
+        case .settings: SettingsView()
         case .category(let id): CategoryView(categoryID: id).id(id)
         }
     }
@@ -81,6 +89,7 @@ struct Background: View {
 struct Sidebar: View {
     @EnvironmentObject var state: AppState
     @EnvironmentObject var hub: HubState
+    @EnvironmentObject var sims: SimState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -113,6 +122,11 @@ struct Sidebar: View {
                        trailing: hub.runners.isEmpty ? nil : "\(hub.runnersUp)/\(hub.runners.count) runner", selected: state.selection == .dev) {
                 state.selection = .dev
             }
+            SidebarRow(icon: "iphone.gen3", title: "Simulator",
+                       trailing: sims.loaded ? (sims.sizesReady ? fmt(sims.devicesSize + sims.runtimesSize) : "\(sims.devices.count) peranti") : nil,
+                       selected: state.selection == .simulators) {
+                state.selection = .simulators
+            }
             Text("Pembersihan")
                 .font(.system(size: 11, weight: .semibold))
                 .opacity(0.5)
@@ -126,6 +140,21 @@ struct Sidebar: View {
                 }
             }
             Spacer()
+            if let u = state.update {
+                Button { state.selection = .settings } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.down.circle.fill")
+                        Text("Versi \(u.version) tersedia").font(.system(size: 12.5, weight: .semibold))
+                        Spacer()
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(okColor.opacity(0.22)))
+                }
+                .buttonStyle(.plain)
+            }
+            SidebarRow(icon: "gearshape.fill", title: "Tetapan", trailing: nil, selected: state.selection == .settings) {
+                state.selection = .settings
+            }
             VStack(alignment: .leading, spacing: 6) {
                 Text("\(fmt(state.diskFree)) kosong").font(.system(size: 13, weight: .semibold))
                 GeometryReader { g in
@@ -181,18 +210,19 @@ struct SidebarRow: View {
 
 struct OverviewView: View {
     @EnvironmentObject var state: AppState
-    @State private var confirm = false
 
     var headline: String {
-        if state.scanning { return "Sedang mengimbas" }
-        if let f = state.lastFreed { return "\(fmt(f)) dibebaskan" }
+        if state.scanning && !state.hasScanned { return "Sedang mengimbas" }
+        if let f = state.lastFreed { return state.lastWasTrash ? "\(fmt(f)) dialih ke Tong Sampah" : "\(fmt(f)) dibebaskan" }
         if state.hasScanned { return state.totalFound > 0 ? "\(fmt(state.totalFound)) dijumpai" : "Mac ni dah kemas" }
         return "Jom kemas Mac ni"
     }
 
     var subline: String {
-        if state.scanning { return "\(state.scannedCount) daripada \(state.categories.count) kategori siap." }
+        if state.scanning && !state.hasScanned { return "\(state.scannedCount) daripada \(state.categories.count) kategori siap." }
         if state.hasScanned {
+            if state.scanning { return "Mengemas kini di latar. Hasil imbasan terakhir dipaparkan dulu." }
+            if state.lastWasTrash, state.lastFreed != nil { return "Kosongkan Tong Sampah untuk bebaskan ruang sebenar." }
             return state.totalSelected > 0
                 ? "\(fmt(state.totalSelected)) dah dipilih sebab selamat dibuang. Buka kategori untuk pilih yang lain."
                 : "Tiada yang dipilih. Buka kategori untuk pilih item."
@@ -207,6 +237,10 @@ struct OverviewView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(headline).font(.system(size: 36, weight: .bold, design: .rounded))
                     Text(subline).font(.system(size: 15)).opacity(0.8).fixedSize(horizontal: false, vertical: true)
+                    if let d = state.lastScan, state.hasScanned {
+                        Text("Imbasan terakhir \(ago(d))" + (History.totalFreed > 0 ? " · \(fmt(History.totalFreed)) dibebaskan sepanjang masa" : ""))
+                            .font(.system(size: 12)).opacity(0.55)
+                    }
                 }
                 Spacer(minLength: 0)
             }
@@ -222,22 +256,17 @@ struct OverviewView: View {
         }
         .padding(.horizontal, 38)
         .padding(.bottom, 30)
-        .alert("Bersihkan \(state.selectedCount) item?", isPresented: $confirm) {
-            Button("Batal", role: .cancel) {}
-            Button("Bersihkan", role: .destructive) { state.clean(categoryID: nil) }
-        } message: {
-            Text("\(fmt(state.totalSelected)) akan dibuang. Cache dipadam terus dan tak boleh dipulihkan.")
-        }
     }
 
     @ViewBuilder var actionBar: some View {
-        if state.hasScanned && !state.scanning {
+        if state.hasScanned {
             HStack(spacing: 12) {
-                PillButton(title: "Imbas semula", icon: "arrow.clockwise", filled: false) { state.scan() }
+                PillButton(title: state.scanning ? "Mengimbas" : "Imbas semula", icon: "arrow.clockwise", filled: false) { state.scan() }
+                    .disabled(state.scanning)
                 PillButton(title: state.totalSelected > 0 ? "Bersihkan \(fmt(state.totalSelected))" : "Tiada pilihan",
-                           icon: "sparkles", filled: true, tint: state.theme.a) { confirm = true }
-                    .disabled(state.totalSelected == 0)
-                    .opacity(state.totalSelected == 0 ? 0.5 : 1)
+                           icon: "sparkles", filled: true, tint: state.theme.a) { state.requestClean(categoryID: nil) }
+                    .disabled(state.totalSelected == 0 || state.scanning)
+                    .opacity(state.totalSelected == 0 || state.scanning ? 0.5 : 1)
             }
         } else {
             ScanButton(scanning: state.scanning) { state.scan() }
@@ -373,7 +402,6 @@ struct PillButton: View {
 struct CategoryView: View {
     let categoryID: String
     @EnvironmentObject var state: AppState
-    @State private var confirm = false
 
     var body: some View {
         if let cat = state.categories.first(where: { $0.id == categoryID }) {
@@ -390,12 +418,6 @@ struct CategoryView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if cat.scanned && !cat.items.isEmpty { bottom(cat) }
-            }
-            .alert("Bersihkan \(cat.selectedItems.count) item?", isPresented: $confirm) {
-                Button("Batal", role: .cancel) {}
-                Button("Bersihkan", role: .destructive) { state.clean(categoryID: categoryID) }
-            } message: {
-                Text("\(fmt(cat.selectedSize)) akan dibuang daripada \(cat.title).")
             }
         }
     }
@@ -449,7 +471,7 @@ struct CategoryView: View {
         ScrollView {
             LazyVStack(spacing: 8) {
                 ForEach(cat.items) { item in
-                    ItemRow(item: item) { state.toggle(categoryID, item.id) }
+                    ItemRow(item: item, toggle: { state.toggle(categoryID, item.id) }, exclude: { state.exclude(item.path) })
                 }
             }
             .padding(.horizontal, 32)
@@ -471,9 +493,9 @@ struct CategoryView: View {
             Spacer()
             Text("\(cat.selectedItems.count) dipilih").font(.system(size: 13)).opacity(0.75)
             PillButton(title: cat.selectedSize > 0 ? "Bersihkan \(fmt(cat.selectedSize))" : "Bersihkan",
-                       icon: "sparkles", filled: true, tint: cat.theme.a) { confirm = true }
-                .disabled(cat.selectedItems.isEmpty)
-                .opacity(cat.selectedItems.isEmpty ? 0.5 : 1)
+                       icon: "sparkles", filled: true, tint: cat.theme.a) { state.requestClean(categoryID: categoryID) }
+                .disabled(cat.selectedItems.isEmpty || state.scanning)
+                .opacity(cat.selectedItems.isEmpty || state.scanning ? 0.5 : 1)
         }
         .padding(.horizontal, 32)
         .padding(.vertical, 16)
@@ -484,6 +506,7 @@ struct CategoryView: View {
 struct ItemRow: View {
     let item: CleanItem
     let toggle: () -> Void
+    var exclude: (() -> Void)?
     @State private var hover = false
 
     var locked: Bool { item.safety == .locked }
@@ -514,6 +537,9 @@ struct ItemRow: View {
         .contextMenu {
             Button("Tunjuk dalam Finder") {
                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: item.path)])
+            }
+            if let exclude {
+                Button("Jangan sentuh item ini lagi") { exclude() }
             }
         }
     }
