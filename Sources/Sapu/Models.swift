@@ -59,6 +59,7 @@ enum Selection: Hashable {
     case dev
     case simulators
     case settings
+    case history
     case category(String)
 }
 

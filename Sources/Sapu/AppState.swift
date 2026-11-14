@@ -40,7 +40,7 @@ final class AppState: ObservableObject {
 
     var theme: Theme {
         switch selection {
-        case .overview, .settings: return .overview
+        case .overview, .settings, .history: return .overview
         case .worktrees: return .worktrees
         case .builds: return .builds
         case .dev: return .dev
@@ -203,6 +203,8 @@ final class AppState: ObservableObject {
         Task {
             var freed: Int64 = 0
             var done = 0
+            var record = [HistoryItem]()
+            let titles = Dictionary(uniqueKeysWithValues: self.categories.map { ($0.id, $0.title) })
             for (n, w) in work.enumerated() {
                 self.cleanLabel = w.item.name
                 let err: String? = await withCheckedContinuation { cont in
@@ -215,6 +217,8 @@ final class AppState: ObservableObject {
                 } else {
                     freed += w.item.size
                     done += 1
+                    record.append(HistoryItem(name: w.item.name, category: titles[w.cat] ?? w.cat,
+                                              how: actionLabel(w.item, trash: toTrash), size: w.item.size))
                     if let c = self.categories.firstIndex(where: { $0.id == w.cat }) {
                         self.categories[c].items.removeAll { $0.id == w.item.id }
                     }
@@ -227,7 +231,7 @@ final class AppState: ObservableObject {
             self.refreshDisk()
             self.showErrors = !self.errors.isEmpty
             self.saveCache()
-            History.record(freed: freed, count: done, note: toTrash ? "Pembersih (ke Tong Sampah)" : "Pembersih")
+            History.record(freed: freed, count: done, note: toTrash ? "Pembersih (ke Tong Sampah)" : "Pembersih", items: record)
         }
     }
 
@@ -304,6 +308,26 @@ final class AppState: ObservableObject {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 self.snapshot(dir + "/\(n + 2)-\(s.1).png")
             }
+            // Halaman sejarah dengan data contoh dalam folder sementara, supaya data sebenar tak disentuh.
+            let demo = NSTemporaryDirectory() + "sapu-demo-" + UUID().uuidString
+            try? FileManager.default.createDirectory(atPath: demo, withIntermediateDirectories: true)
+            AppSupport.override = demo
+            var fake = [HistoryEntry]()
+            let cal = Calendar.current
+            let names = [("DerivedData", "Xcode", 6_200_000_000), ("Cache Gradle", "Cache developer", 3_100_000_000),
+                         ("hrwork_mobile/fix-login", "Worktree git", 1_400_000_000), ("Data iPhone 17 Pro", "Simulator", 5_000_000_000)]
+            for back in [0, 0, 1, 3, 4, 7, 9, 12, 15, 21] {
+                let t = cal.date(byAdding: .day, value: -back, to: Date())!.addingTimeInterval(Double(-back * 997 % 7200))
+                let items = names.prefix(2 + back % 3).map { HistoryItem(name: $0.0, category: $0.1, how: "Dipadam terus", size: Int64($0.2) / Int64(1 + back % 2)) }
+                fake.append(HistoryEntry(date: t, freed: items.reduce(0) { $0 + $1.size }, count: items.count, note: "Pembersih", items: items))
+            }
+            fake.append(HistoryEntry(date: Date().addingTimeInterval(-86400 * 30), freed: 2_000_000_000, count: 1, note: "Worktree", items: nil))
+            Store.save(fake, "history.json")
+            self.selection = .history
+            try? await Task.sleep(nanoseconds: 1_800_000_000)
+            self.snapshot(dir + "/8-history.png")
+            AppSupport.override = nil
+            try? FileManager.default.removeItem(atPath: demo)
             if let c = self.categories.first(where: { !$0.selectedItems.isEmpty }) {
                 self.selection = .category(c.id)
                 self.requestClean(categoryID: c.id)

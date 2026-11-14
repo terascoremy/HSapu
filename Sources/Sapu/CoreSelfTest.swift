@@ -44,6 +44,29 @@ enum CoreSelfTest {
         check("sejarah: jumlah dan kiraan betul", History.totalFreed == 8_000 && History.all().count == 2)
         check("sejarah: terbaru dahulu", History.all().first?.note == "ujian b")
 
+        // --- sejarah mengikut hari dengan butiran item
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let twoDaysAgo = cal.date(byAdding: .day, value: -2, to: today)!.addingTimeInterval(11 * 3600)
+        var hist = Store.load([HistoryEntry].self, "history.json") ?? []
+        hist.append(HistoryEntry(date: twoDaysAgo, freed: 4_000_000_000, count: 2, note: "Pembersih",
+                                 items: [HistoryItem(name: "DerivedData", category: "Xcode", how: "Dipadam terus", size: 3_000_000_000),
+                                         HistoryItem(name: "Log aplikasi", category: "Sampah sistem", how: "Dipadam terus", size: 1_000_000_000)]))
+        hist.append(HistoryEntry(date: twoDaysAgo.addingTimeInterval(3600), freed: 2_000_000_000, count: 1, note: "Worktree", items: nil))
+        Store.save(hist, "history.json")
+        let days = History.byDay()
+        let target = days.first { cal.isDate($0.day, inSameDayAs: twoDaysAgo) }
+        check("sejarah harian: dua tindakan sehari dikumpul", target?.entries.count == 2 && target?.freed == 6_000_000_000 && target?.count == 3)
+        check("sejarah harian: hari terbaru dahulu", days.count >= 2 && days[0].day > days[days.count - 1].day)
+        check("sejarah harian: jumlah GB pada tarikh tertentu", History.freed(on: twoDaysAgo) == 6_000_000_000 && History.freed(on: today.addingTimeInterval(-86400 * 40)) == 0)
+        let withItems = History.all().first { $0.items?.count == 2 }
+        check("sejarah harian: butiran item disimpan", withItems?.items?.first?.name == "DerivedData" && withItems?.items?.last?.size == 1_000_000_000)
+        let legacy = #"[{"id":"7F1B8E0B-1111-4222-8333-444455556666","date":"2026-01-02T03:04:05Z","freed":99,"count":1,"note":"lama"}]"#
+        if let d = legacy.data(using: .utf8), let old = try? Store.dec.decode([HistoryEntry].self, from: d) {
+            check("sejarah: rekod lama tanpa item masih boleh dibaca", old.count == 1 && old[0].items == nil && old[0].freed == 99)
+        } else { check("sejarah: rekod lama tanpa item masih boleh dibaca", false) }
+        check("sejarah: julat 7 hari bermula 6 hari lalu", HistoryRange.d7.cutoff() == cal.date(byAdding: .day, value: -6, to: today) && HistoryRange.all.cutoff() == nil)
+
         // --- cache saiz
         let sizedDir = root + "/sized"
         try? fm.createDirectory(atPath: sizedDir, withIntermediateDirectories: true)
@@ -121,6 +144,8 @@ enum CoreSelfTest {
             check("bersih: item dipadam", !fm.fileExists(atPath: cacheFile))
             check("bersih: dikeluarkan dari senarai dan dibebaskan direkod", state.categories.first { $0.id == "system" }?.items.isEmpty == true && state.lastFreed == 2048)
             check("bersih: sejarah ditambah", History.all().contains { $0.note == "Pembersih" && $0.freed == 2048 })
+            check("bersih: sejarah simpan nama item, kategori dan cara",
+                  History.all().first { $0.note == "Pembersih" && $0.freed == 2048 }?.items?.first.map { $0.name == "ada" && $0.category == "Sampah sistem" && $0.how == "Dipadam terus" && $0.size == 2048 } == true)
             check("bersih: cache dikemas kini", Store.load(ScanSnapshot.self, "scan-cache.json")?.items["system"]?.isEmpty == true)
 
             let keep = CleanItem(name: "x", path: root + "/lagi", detail: "", size: 1, safety: .safe, action: .delete, selected: true)

@@ -185,12 +185,29 @@ enum SizeCache {
 
 // MARK: sejarah pembersihan
 
+struct HistoryItem: Codable {
+    var name: String
+    var category: String
+    var how: String
+    var size: Int64
+}
+
 struct HistoryEntry: Codable, Identifiable {
     var id = UUID()
     var date: Date
     var freed: Int64
     var count: Int
     var note: String
+    /// Senarai item yang dipadam. Kosong untuk rekod lama (sebelum 1.2.0).
+    var items: [HistoryItem]?
+}
+
+struct DaySummary: Identifiable {
+    var id: Date { day }
+    let day: Date
+    let entries: [HistoryEntry]
+    var freed: Int64 { entries.reduce(0) { $0 + $1.freed } }
+    var count: Int { entries.reduce(0) { $0 + $1.count } }
 }
 
 enum History {
@@ -203,14 +220,25 @@ enum History {
             .map { $0.element }
     }
 
-    static func record(freed: Int64, count: Int, note: String) {
+    static func record(freed: Int64, count: Int, note: String, items: [HistoryItem]? = nil) {
         guard count > 0 else { return }
         var list = Store.load([HistoryEntry].self, file) ?? []
-        list.append(HistoryEntry(date: Date(), freed: freed, count: count, note: note))
+        list.append(HistoryEntry(date: Date(), freed: freed, count: count, note: note, items: items))
         Store.save(list, file)
     }
 
     static var totalFreed: Int64 { all().reduce(0) { $0 + $1.freed } }
+
+    /// Dikumpul mengikut hari (waktu tempatan), hari terbaru dahulu.
+    static func byDay(_ entries: [HistoryEntry] = all(), calendar: Calendar = .current) -> [DaySummary] {
+        Dictionary(grouping: entries) { calendar.startOfDay(for: $0.date) }
+            .map { DaySummary(day: $0.key, entries: $0.value) }
+            .sorted { $0.day > $1.day }
+    }
+
+    static func freed(on day: Date, calendar: Calendar = .current) -> Int64 {
+        all().filter { calendar.isDate($0.date, inSameDayAs: day) }.reduce(0) { $0 + $1.freed }
+    }
 }
 
 // MARK: notifikasi, log masuk, akses cakera

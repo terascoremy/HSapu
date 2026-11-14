@@ -268,22 +268,15 @@ struct SettingsView: View {
     var historyPanel: some View {
         let list = History.all()
         return Panel {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("Sejarah pembersihan").font(.system(size: 15, weight: .semibold))
-                    Chip(text: "\(list.count) kali")
-                    Spacer()
+                    Text(list.isEmpty ? "Belum ada pembersihan."
+                         : "\(list.count) pembersihan, \(fmt(History.totalFreed)) dibebaskan sepanjang masa.")
+                        .font(.system(size: 12.5)).opacity(0.65)
                 }
-                if list.isEmpty { Text("Belum ada pembersihan.").font(.system(size: 12.5)).opacity(0.65) }
-                ForEach(list.prefix(15)) { h in
-                    HStack {
-                        Text(h.date.formatted(date: .abbreviated, time: .shortened)).font(.system(size: 12)).opacity(0.65).frame(width: 150, alignment: .leading)
-                        Text(h.note).font(.system(size: 12.5)).lineLimit(1)
-                        Spacer()
-                        Text("\(h.count) item").font(.system(size: 12)).opacity(0.6)
-                        Text(fmt(h.freed)).font(.system(size: 12.5, weight: .semibold)).monospacedDigit().frame(width: 76, alignment: .trailing)
-                    }
-                }
+                Spacer()
+                PillButton(title: "Buka sejarah", icon: "clock.arrow.circlepath", filled: false) { state.selection = .history }
             }
         }
     }

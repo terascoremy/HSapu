@@ -527,7 +527,10 @@ final class HubState: ObservableObject {
                 if let e = Cleaner.perform(item) { errors.append(e) } else { done.append(w.path) }
             }
             let freed = list.filter { done.contains($0.path) }.reduce(Int64(0)) { $0 + ($1.size ?? 0) }
-            History.record(freed: freed, count: done.count, note: "Worktree")
+            let recorded = list.filter { done.contains($0.path) }.map {
+                HistoryItem(name: "\($0.repoName)/\($0.name)", category: "Worktree git", how: "Worktree dibuang, branch kekal", size: $0.size ?? 0)
+            }
+            History.record(freed: freed, count: done.count, note: "Worktree", items: recorded)
             let removed = done, failures = errors
             await MainActor.run {
                 self.worktrees.removeAll { removed.contains($0.path) }

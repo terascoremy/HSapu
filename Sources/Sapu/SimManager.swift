@@ -145,7 +145,7 @@ final class SimState: ObservableObject {
         }
     }
 
-    private func run(_ label: String, work: @escaping () -> (freed: Int64, count: Int, error: String?)) {
+    private func run(_ label: String, work: @escaping () -> (freed: Int64, count: Int, error: String?, items: [HistoryItem])) {
         guard !busy else { return }
         busy = true
         message = nil
@@ -157,7 +157,7 @@ final class SimState: ObservableObject {
                     self.message = e
                 } else {
                     self.message = "\(label) siap" + (r.freed > 0 ? ", \(fmt(r.freed)) dibebaskan." : ".")
-                    History.record(freed: r.freed, count: r.count, note: "Simulator: \(label)")
+                    History.record(freed: r.freed, count: r.count, note: "Simulator: \(label)", items: r.items)
                 }
                 self.refresh()
             }
@@ -181,7 +181,8 @@ final class SimState: ObservableObject {
         guard !d.booted else { return }
         run("Erase \(d.name)") {
             let r = Self.eraseOne(d)
-            return (r.freed, r.error == nil ? 1 : 0, r.error)
+            return (r.freed, r.error == nil ? 1 : 0, r.error,
+                    r.error == nil ? [HistoryItem(name: d.name, category: "Simulator", how: "Di-erase", size: r.freed)] : [])
         }
     }
 
@@ -190,8 +191,8 @@ final class SimState: ObservableObject {
         run("Padam \(d.name)") {
             let before = d.size ?? Scanner.size(d.dataPath)
             let r = SimScan.ctl(["delete", d.udid])
-            if r.status != 0 { return (0, 0, "\(d.name): \(r.out.trimmingCharacters(in: .whitespacesAndNewlines))") }
-            return (before, 1, nil)
+            if r.status != 0 { return (0, 0, "\(d.name): \(r.out.trimmingCharacters(in: .whitespacesAndNewlines))", []) }
+            return (before, 1, nil, [HistoryItem(name: d.name, category: "Simulator", how: "Peranti dipadam", size: before)])
         }
     }
 
@@ -201,12 +202,16 @@ final class SimState: ObservableObject {
             var freed: Int64 = 0
             var done = 0
             var errors = [String]()
+            var items = [HistoryItem]()
             for d in list {
                 let r = Self.eraseOne(d)
                 freed += r.freed
-                if let e = r.error { errors.append(e) } else { done += 1 }
+                if let e = r.error { errors.append(e) } else {
+                    done += 1
+                    items.append(HistoryItem(name: d.name, category: "Simulator", how: "Di-erase", size: r.freed))
+                }
             }
-            return (freed, done, errors.isEmpty ? nil : errors.prefix(3).joined(separator: "\n"))
+            return (freed, done, errors.isEmpty ? nil : errors.prefix(3).joined(separator: "\n"), items)
         }
     }
 
@@ -215,8 +220,8 @@ final class SimState: ObservableObject {
         run("Padam peranti tak tersedia") {
             let before = list.reduce(Int64(0)) { $0 + ($1.size ?? 0) }
             let r = SimScan.ctl(["delete", "unavailable"])
-            if r.status != 0 { return (0, 0, r.out.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            return (before, list.count, nil)
+            if r.status != 0 { return (0, 0, r.out.trimmingCharacters(in: .whitespacesAndNewlines), []) }
+            return (before, list.count, nil, list.map { HistoryItem(name: $0.name, category: "Simulator", how: "Peranti tak tersedia dipadam", size: $0.size ?? 0) })
         }
     }
 
@@ -236,8 +241,8 @@ final class SimState: ObservableObject {
     func deleteRuntime(_ r: SimRuntime) {
         run("Padam runtime \(r.name)") {
             let out = SimScan.ctl(["runtime", "delete", r.id], timeout: 180)
-            if out.status != 0 { return (0, 0, "\(r.name): \(out.out.trimmingCharacters(in: .whitespacesAndNewlines))") }
-            return (r.size, 1, nil)
+            if out.status != 0 { return (0, 0, "\(r.name): \(out.out.trimmingCharacters(in: .whitespacesAndNewlines))", []) }
+            return (r.size, 1, nil, [HistoryItem(name: r.name, category: "Simulator", how: "Runtime dipadam", size: r.size)])
         }
     }
 }

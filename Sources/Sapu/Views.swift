@@ -25,6 +25,7 @@ struct SapuApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
+        .defaultSize(width: 1240, height: 840)
 
         MenuBarExtra {
             MenuBarContent().environmentObject(state).environmentObject(hub).environmentObject(sims)
@@ -48,7 +49,7 @@ struct RootView: View {
             }
             if state.cleaning { CleaningOverlay() }
         }
-        .frame(minWidth: 1120, minHeight: 700)
+        .frame(minWidth: 1100, minHeight: 780)
         .foregroundStyle(.white)
         .ignoresSafeArea()
         .sheet(item: $state.pending) { p in CleanSheet(p: p) }
@@ -67,6 +68,7 @@ struct RootView: View {
         case .dev: DevView()
         case .simulators: SimView()
         case .settings: SettingsView()
+        case .history: HistoryView()
         case .category(let id): CategoryView(categoryID: id).id(id)
         }
     }
@@ -97,49 +99,53 @@ struct Sidebar: View {
                 Image(systemName: "sparkles").font(.system(size: 20, weight: .bold))
                 Text("Sapu").font(.system(size: 22, weight: .bold, design: .rounded))
             }
-            .padding(.top, 52)
+            .padding(.top, 46)
             .padding(.horizontal, 10)
-            .padding(.bottom, 18)
+            .padding(.bottom, 12)
 
-            SidebarRow(icon: "sparkles.rectangle.stack.fill", title: "Ringkasan pembersih", trailing: nil, selected: state.selection == .overview) {
-                state.selection = .overview
-            }
-            Text("Kerja")
-                .font(.system(size: 11, weight: .semibold))
-                .opacity(0.5)
-                .padding(.horizontal, 10)
-                .padding(.top, 14)
-                .padding(.bottom, 2)
-            SidebarRow(icon: "arrow.triangle.branch", title: "Worktree",
-                       trailing: hub.attentionCount > 0 ? "\(hub.attentionCount) perhatian" : nil, selected: state.selection == .worktrees) {
-                state.selection = .worktrees
-            }
-            SidebarRow(icon: "shippingbox.fill", title: "Build dan release",
-                       trailing: hub.apps.isEmpty ? nil : "\(hub.apps.count) app", selected: state.selection == .builds) {
-                state.selection = .builds
-            }
-            SidebarRow(icon: "gauge.with.dots.needle.67percent", title: "Dev",
-                       trailing: hub.runners.isEmpty ? nil : "\(hub.runnersUp)/\(hub.runners.count) runner", selected: state.selection == .dev) {
-                state.selection = .dev
-            }
-            SidebarRow(icon: "iphone.gen3", title: "Simulator",
-                       trailing: sims.loaded ? (sims.sizesReady ? fmt(sims.devicesSize + sims.runtimesSize) : "\(sims.devices.count) peranti") : nil,
-                       selected: state.selection == .simulators) {
-                state.selection = .simulators
-            }
-            Text("Pembersihan")
-                .font(.system(size: 11, weight: .semibold))
-                .opacity(0.5)
-                .padding(.horizontal, 10)
-                .padding(.top, 14)
-                .padding(.bottom, 2)
-            ForEach(state.categories) { c in
-                SidebarRow(icon: c.icon, title: c.title, trailing: c.scanned && c.total > 0 ? fmt(c.total) : nil,
-                           selected: state.selection == .category(c.id)) {
-                    state.selection = .category(c.id)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 4) {
+                    SidebarRow(icon: "sparkles.rectangle.stack.fill", title: "Ringkasan pembersih", trailing: nil, selected: state.selection == .overview) {
+                        state.selection = .overview
+                    }
+                    Text("Kerja")
+                        .font(.system(size: 11, weight: .semibold))
+                        .opacity(0.5)
+                        .padding(.horizontal, 10)
+                        .padding(.top, 10)
+                        .padding(.bottom, 2)
+                    SidebarRow(icon: "arrow.triangle.branch", title: "Worktree",
+                               trailing: hub.attentionCount > 0 ? "\(hub.attentionCount) perhatian" : nil, selected: state.selection == .worktrees) {
+                        state.selection = .worktrees
+                    }
+                    SidebarRow(icon: "shippingbox.fill", title: "Build dan release",
+                               trailing: hub.apps.isEmpty ? nil : "\(hub.apps.count) app", selected: state.selection == .builds) {
+                        state.selection = .builds
+                    }
+                    SidebarRow(icon: "gauge.with.dots.needle.67percent", title: "Dev",
+                               trailing: hub.runners.isEmpty ? nil : "\(hub.runnersUp)/\(hub.runners.count) runner", selected: state.selection == .dev) {
+                        state.selection = .dev
+                    }
+                    SidebarRow(icon: "iphone.gen3", title: "Simulator",
+                               trailing: sims.loaded ? (sims.sizesReady ? fmt(sims.devicesSize + sims.runtimesSize) : "\(sims.devices.count) peranti") : nil,
+                               selected: state.selection == .simulators) {
+                        state.selection = .simulators
+                    }
+                    Text("Pembersihan")
+                        .font(.system(size: 11, weight: .semibold))
+                        .opacity(0.5)
+                        .padding(.horizontal, 10)
+                        .padding(.top, 10)
+                        .padding(.bottom, 2)
+                    ForEach(state.categories) { c in
+                        SidebarRow(icon: c.icon, title: c.title, trailing: c.scanned && c.total > 0 ? fmt(c.total) : nil,
+                                   selected: state.selection == .category(c.id)) {
+                            state.selection = .category(c.id)
+                        }
+                    }
                 }
             }
-            Spacer()
+            .frame(maxHeight: .infinity)
             if let u = state.update {
                 Button { state.selection = .settings } label: {
                     HStack(spacing: 8) {
@@ -151,6 +157,10 @@ struct Sidebar: View {
                     .background(RoundedRectangle(cornerRadius: 10).fill(okColor.opacity(0.22)))
                 }
                 .buttonStyle(.plain)
+            }
+            SidebarRow(icon: "clock.arrow.circlepath", title: "Sejarah", trailing: History.totalFreed > 0 ? fmt(History.totalFreed) : nil,
+                       selected: state.selection == .history) {
+                state.selection = .history
             }
             SidebarRow(icon: "gearshape.fill", title: "Tetapan", trailing: nil, selected: state.selection == .settings) {
                 state.selection = .settings
@@ -197,7 +207,7 @@ struct SidebarRow: View {
                 }
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 7)
+            .padding(.vertical, 5)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(selected ? 0.16 : (hover ? 0.07 : 0))))
             .contentShape(Rectangle())
         }
