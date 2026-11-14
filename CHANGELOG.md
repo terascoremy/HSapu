@@ -12,9 +12,12 @@ Pantas, lebih selamat, dan boleh dipantau.
 - **Pemantauan:** notifikasi bila ruang cakera rendah, imbasan automatik harian atau mingguan, buka semasa log masuk. Berjalan selagi Sapu dibuka (ikon bar menu).
 - **Akses Cakera Penuh:** Tetapan memeriksa dan membuka tetapan sistem.
 - **Kemas kini:** semak keluaran baru di GitHub melalui `gh`, muat turun dmg dari dalam app.
-- **Pembinaan:** nombor versi dalam `Version.swift`, dmg bernama `Sapu-<versi>.dmg`, `scripts/notarize.sh` untuk Developer ID dan notarize, CI GitHub Actions (build + ujian) pada tag.
+- **Pembinaan:** nombor versi dalam `Version.swift`, dmg bernama `Sapu-<versi>.dmg`, `scripts/notarize.sh` untuk Developer ID dan notarize.
 - **Pembetulan:** dialog pengesahan butang Buang worktree membaca pilihan pada masa klik (boleh jadi kosong pada sesetengah versi macOS).
 - **Ujian:** `--selftest-core` (42 semakan termasuk kitar hayat simulator ujian yang dicipta dan dipadam sendiri).
+
+## Tanpa versi — 2026-11-14
+- GitHub Actions dimatikan dan workflow dibuang. Semua ujian dijalankan di Mac sendiri (`--selftest`, `--selftest-core`), jadi tiada minit Actions digunakan.
 
 ## 1.0.0 — 2026-11-14
 Keluaran pertama.
