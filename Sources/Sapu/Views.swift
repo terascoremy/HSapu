@@ -129,7 +129,7 @@ struct Sidebar: View {
                         state.selection = .builds
                     }
                     SidebarRow(icon: "gauge.with.dots.needle.67percent", title: "Dev",
-                               trailing: hub.runners.isEmpty ? nil : "\(hub.runnersUp)/\(hub.runners.count) runner", selected: state.selection == .dev) {
+                               trailing: hub.bootedSims > 0 ? "\(hub.bootedSims) sim hidup" : nil, selected: state.selection == .dev) {
                         state.selection = .dev
                     }
                     SidebarRow(icon: "iphone.gen3", title: "Simulator",

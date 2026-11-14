@@ -3,7 +3,7 @@
 Pembersih Mac dan hab kerja untuk developer. Native SwiftUI, macOS 14+.
 
 - **Pembersih:** cache sistem, Xcode, cache developer, `node_modules`, worktree git, folder home, Downloads, fail besar. Setiap item ada tahap keselamatan, pratonton sebelum padam, dan pilihan hantar ke Tong Sampah.
-- **Kerja:** pengurus worktree, penjejak build dan release (versi, nombor build, status CI), papan pemuka dev (runner GitHub Actions, Docker, simulator, disk).
+- **Kerja:** pengurus worktree, penjejak build dan release (versi, nombor build, status CI), papan pemuka dev (Docker, simulator, emulator, disk).
 - **Simulator:** runtime dan peranti dengan saiz, erase atau padam.
 - **Latar:** ikon bar menu, notifikasi ruang cakera rendah, imbasan berjadual.
 
@@ -21,7 +21,7 @@ Versi ditetapkan dalam `Sources/Sapu/Version.swift` sahaja.
 ```bash
 .build/debug/Sapu --selftest        # pembersihan dan worktree
 .build/debug/Sapu --selftest-core   # cache, kecualian, sejarah, simulator, kemas kini
-.build/debug/Sapu --selftest-hub    # hab (menyentuh runner dan Terminal sebenar, jalankan tangan)
+.build/debug/Sapu --selftest-hub    # hab (membuka Terminal sebenar, jalankan tangan)
 .build/debug/Sapu --scan [--big] [--all]   # imbas tanpa GUI
 .build/debug/Sapu --shot <folder>   # tangkap skrin setiap halaman
 .build/debug/Sapu --check-update [versi]   # semak keluaran baru di GitHub

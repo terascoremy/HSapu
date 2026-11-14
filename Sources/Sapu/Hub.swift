@@ -45,15 +45,6 @@ struct BuildApp: Identifiable, Codable {
     var ci: CIStatus?
 }
 
-struct RunnerInfo: Identifiable {
-    var id: String { dir }
-    let name: String
-    let dir: String
-    let repo: String
-    var running: Bool
-    var busy: Bool
-}
-
 struct DockerInfo {
     var installed = false
     var running = false
@@ -281,54 +272,6 @@ enum HubScan {
         return CIStatus(state: state, title: first["displayTitle"] as? String ?? "", when: when)
     }
 
-    // runners
-
-    static func runners() -> [RunnerInfo] {
-        var dirs = [String]()
-        for c in Scanner.children(home) where c.hasPrefix("actions-runner") {
-            let base = home + "/" + c
-            if fm.fileExists(atPath: base + "/.runner") { dirs.append(base) }
-            for s in Scanner.children(base) where fm.fileExists(atPath: base + "/" + s + "/.runner") { dirs.append(base + "/" + s) }
-        }
-        let ps = Shell.run("/bin/ps", ["-axo", "command="]).out
-        var out = [RunnerInfo]()
-        for d in dirs.sorted() {
-            var text = read(d + "/.runner") ?? ""
-            text = text.replacingOccurrences(of: "\u{FEFF}", with: "")
-            var name = (d as NSString).lastPathComponent
-            var repo = ""
-            if let data = text.data(using: .utf8), let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                name = (j["agentName"] as? String) ?? name
-                if let u = j["gitHubUrl"] as? String { repo = u.split(separator: "/").suffix(2).joined(separator: "/") }
-            }
-            let running = ps.contains(d + "/bin/Runner.Listener")
-            let busy = ps.contains(d + "/bin/Runner.Worker")
-            out.append(RunnerInfo(name: name, dir: d, repo: repo, running: running, busy: busy))
-        }
-        return out
-    }
-
-    static func startRunner(_ dir: String, name: String) {
-        let logPath = home + "/Library/Logs/Sapu-runner-\(name).log"
-        if !fm.fileExists(atPath: logPath) { fm.createFile(atPath: logPath, contents: nil) }
-        guard let log = FileHandle(forWritingAtPath: logPath) else { return }
-        log.seekToEndOfFile()
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
-        // setsid supaya runner terus hidup walaupun Sapu ditutup
-        p.arguments = ["-MPOSIX", "-e", "POSIX::setsid(); exec @ARGV", "./run.sh"]
-        p.currentDirectoryURL = URL(fileURLWithPath: dir)
-        p.standardInput = FileHandle.nullDevice
-        p.standardOutput = log
-        p.standardError = log
-        try? p.run()
-        try? log.close()
-    }
-
-    static func stopRunner(_ dir: String) {
-        _ = Shell.run("/usr/bin/pkill", ["-TERM", "-f", dir + "/bin/Runner.Listener"])
-    }
-
     // docker, simulators
 
     static func docker() -> DockerInfo {
@@ -368,7 +311,6 @@ final class HubState: ObservableObject {
     @Published var loadingWT = false
     @Published var apps: [BuildApp] = []
     @Published var loadingApps = false
-    @Published var runners: [RunnerInfo] = []
     @Published var docker = DockerInfo()
     @Published var bootedSims = 0
     @Published var avds: [String] = []
@@ -414,7 +356,6 @@ final class HubState: ObservableObject {
     func saveCache() {
         Store.save(HubSnapshot(date: Date(), worktrees: worktrees, apps: apps), "hub-cache.json")
     }
-    var runnersUp: Int { runners.filter { $0.running }.count }
 
     func refreshAll() {
         loadWorktrees()
@@ -473,34 +414,16 @@ final class HubState: ObservableObject {
 
     func refreshLive() {
         Task.detached(priority: .utility) {
-            let r = HubScan.runners()
             let d = HubScan.docker()
             let s = HubScan.bootedSims()
             let a = HubScan.avds()
             let e = HubScan.emulatorsRunning()
             await MainActor.run {
-                self.runners = r
                 self.docker = d
                 self.bootedSims = s
                 self.avds = a
                 self.emulators = e
             }
-        }
-    }
-
-    func start(_ r: RunnerInfo) {
-        Task.detached {
-            HubScan.startRunner(r.dir, name: r.name)
-            try? await Task.sleep(nanoseconds: 2_500_000_000)
-            await MainActor.run { self.refreshLive() }
-        }
-    }
-
-    func stop(_ r: RunnerInfo) {
-        Task.detached {
-            HubScan.stopRunner(r.dir)
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            await MainActor.run { self.refreshLive() }
         }
     }
 

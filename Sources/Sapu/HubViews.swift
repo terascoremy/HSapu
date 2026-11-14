@@ -413,7 +413,7 @@ struct DevView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SectionHeader(icon: "gauge.with.dots.needle.67percent", title: "Dev",
-                          subtitle: "Runner CI, Docker, simulator dan ruang disk di satu tempat.",
+                          subtitle: "Docker, simulator, emulator dan ruang disk di satu tempat.",
                           glow: Theme.dev.glow,
                           trailing: "\(fmt(state.diskFree)) kosong", trailingNote: "daripada \(fmt(state.diskTotal))")
             ScrollView {
@@ -428,7 +428,6 @@ struct DevView: View {
                             }
                         }
                     }
-                    runnersPanel
                     HStack(alignment: .top, spacing: 14) {
                         dockerPanel
                         devicesPanel
@@ -436,44 +435,6 @@ struct DevView: View {
                 }
                 .padding(.horizontal, 32)
                 .padding(.bottom, 24)
-            }
-        }
-    }
-
-    var runnersPanel: some View {
-        Panel {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("Runner GitHub Actions").font(.system(size: 15, weight: .semibold))
-                    Chip(text: "\(hub.runnersUp) daripada \(hub.runners.count) berjalan", color: hub.runnersUp > 0 ? okColor : .white)
-                    Spacer()
-                    if hub.runners.contains(where: { !$0.running }) {
-                        PillButton(title: "Mulakan semua", icon: "play.fill", filled: false) { hub.runners.filter { !$0.running }.forEach { hub.start($0) } }
-                    }
-                    if hub.runnersUp > 0 {
-                        PillButton(title: "Hentikan semua", icon: "stop.fill", filled: false) { hub.runners.filter { $0.running && !$0.busy }.forEach { hub.stop($0) } }
-                    }
-                }
-                if hub.runners.isEmpty {
-                    Text("Tiada runner dijumpai dalam folder home.").font(.system(size: 13)).opacity(0.65)
-                }
-                ForEach(hub.runners) { r in
-                    HStack(spacing: 12) {
-                        Circle().fill(r.busy ? warnColor : (r.running ? okColor : Color.white.opacity(0.3))).frame(width: 9, height: 9)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(r.name).font(.system(size: 13.5, weight: .semibold))
-                            Text(r.repo.isEmpty ? Scanner.short(r.dir) : r.repo + " · " + Scanner.short(r.dir)).font(.system(size: 11.5)).opacity(0.6)
-                        }
-                        Spacer()
-                        Text(r.busy ? "Sibuk menjalankan job" : (r.running ? "Menunggu job" : "Berhenti")).font(.system(size: 12)).opacity(0.75)
-                        if r.running {
-                            IconButton(icon: "stop.fill", help: r.busy ? "Sedang menjalankan job" : "Hentikan runner", disabled: r.busy) { hub.stop(r) }
-                        } else {
-                            IconButton(icon: "play.fill", help: "Mulakan runner") { hub.start(r) }
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
             }
         }
     }
@@ -546,7 +507,7 @@ struct MenuBarContent: View {
                 Spacer()
             }
             line("internaldrive", "\(fmt(state.diskFree)) kosong", state.diskFree < Int64(Prefs.lowDiskGB) * 1_000_000_000 ? badColor : nil) { go(.overview) }
-            line("play.circle", "\(hub.runnersUp) daripada \(hub.runners.count) runner CI berjalan", nil) { go(.dev) }
+            line("shippingbox.circle", hub.docker.running ? "Docker berjalan, \(hub.docker.up) container aktif" : "Docker tak berjalan", nil) { go(.dev) }
             line("arrow.triangle.branch", hub.worktrees.isEmpty ? "Worktree belum diimbas" : "\(hub.attentionCount) worktree perlu perhatian, \(hub.safeWorktrees.count) boleh dibuang",
                  hub.attentionCount > 0 ? warnColor : nil) { go(.worktrees) }
             line("shippingbox", "\(hub.apps.count) app dijejak", nil) { go(.builds) }

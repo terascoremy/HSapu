@@ -2,6 +2,9 @@
 
 Setiap kemas kini: naikkan `appVersion` dalam `Sources/Sapu/Version.swift`, tambah entri di sini, commit, kemudian `git tag vX.Y.Z`.
 
+## 1.3.1 — 2026-11-14
+- **Runner GitHub Actions dibuang daripada app:** panel runner dalam halaman Dev, kiraan runner dalam sidebar dan baris runner dalam menu bar dibuang, bersama kod mulakan dan hentikan runner. Dev kini Docker, simulator, emulator dan ruang disk. Runner sebenar di Mac tak disentuh. Folder `actions-runner*` masih muncul dalam kategori Folder home untuk dibersihkan.
+
 ## 1.3.0 — 2026-11-14
 - **Tapis dan isih dalam setiap kategori:** carian nama, tapisan jenis fail (Folder, Dokumen, Video, Arkib, Gambar, Pemasang, Audio, Kod dan data, Lain; untuk worktree ikut repo), tapisan tahap keselamatan, dan tapisan umur ("tak digunakan lebih 30, 90, 180 hari atau 1 tahun"). Isih ikut saiz, tarikh ditambah, terakhir digunakan atau nama.
 - **Butiran tarikh pada setiap baris:** "Ditambah" (Spotlight Date Added, jika tiada tarikh dicipta) dan "Digunakan" (Spotlight Last Used, jika tiada tarikh akses atau ubah).

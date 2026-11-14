@@ -10,35 +10,7 @@ enum HubSelfTest {
         }
         let fm = FileManager.default
         let root = NSTemporaryDirectory() + "sapu-hubtest-" + UUID().uuidString
-        try? fm.createDirectory(atPath: root + "/runner/bin", withIntermediateDirectories: true)
-
-        // Runner palsu: run.sh -> bin/Runner.Listener (skrip python yang tidur sehingga SIGINT)
-        let listener = root + "/runner/bin/Runner.Listener"
-        try? "#!/usr/bin/env python3\nimport time\ntime.sleep(300)\n".write(toFile: listener, atomically: true, encoding: .utf8)
-        try? "#!/bin/bash\nDIR=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\nexec \"$DIR\"/bin/Runner.Listener \"$@\"\n"
-            .write(toFile: root + "/runner/run.sh", atomically: true, encoding: .utf8)
-        _ = Shell.run("/bin/chmod", ["+x", listener, root + "/runner/run.sh"])
-
-        func listenerRunning() -> Bool {
-            Shell.run("/bin/ps", ["-axo", "command="]).out.contains(root + "/runner/bin/Runner.Listener")
-        }
-        func waitFor(_ want: Bool, seconds: Double = 6) -> Bool {
-            let end = Date().addingTimeInterval(seconds)
-            while Date() < end {
-                if listenerRunning() == want { return true }
-                Thread.sleep(forTimeInterval: 0.3)
-            }
-            return listenerRunning() == want
-        }
-
-        check("runner palsu belum berjalan", !listenerRunning())
-        HubScan.startRunner(root + "/runner", name: "ujian")
-        let started = waitFor(true)
-        check("butang Mulakan: runner berjalan", started)
-        HubScan.stopRunner(root + "/runner")
-        check("butang Hentikan: runner berhenti", waitFor(false))
-        check("log runner ditulis", fm.fileExists(atPath: NSHomeDirectory() + "/Library/Logs/Sapu-runner-ujian.log"))
-        try? fm.removeItem(atPath: NSHomeDirectory() + "/Library/Logs/Sapu-runner-ujian.log")
+        try? fm.createDirectory(atPath: root, withIntermediateDirectories: true)
 
         // Senarai semak: simpan dan set semula melalui UserDefaults
         MainActor.assumeIsolated {
@@ -92,8 +64,6 @@ enum HubSelfTest {
         check("imbas app: jumpa app", !apps.isEmpty)
         check("imbas app: faas ada nombor build iOS", apps.contains { $0.bundleId == "my.faas.app" && $0.iosBuild != nil })
         check("imbas app: iqamah (iOS asli) ada versi", apps.contains { $0.bundleId == "my.iqamah.app" && $0.version != nil })
-        let runners = HubScan.runners()
-        check("imbas runner: jumpa runner", !runners.isEmpty && runners.allSatisfy { !$0.repo.isEmpty })
         let d = HubScan.docker()
         check("docker: status dibaca (\(d.installed ? (d.running ? "berjalan" : "berhenti") : "tiada"))", true)
         print("   simulator hidup: \(HubScan.bootedSims()), AVD: \(HubScan.avds().count)")
