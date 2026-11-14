@@ -7,6 +7,16 @@ if cliArgs.contains("--selftest") {
     exit(0)
 }
 
+if let i = cliArgs.firstIndex(of: "--check-update") {
+    let cur = i + 1 < cliArgs.count ? cliArgs[i + 1] : appVersion
+    switch Updater.check(current: cur) {
+    case .available(let u): print("TERSEDIA \(u.version) dmg=\(u.dmgName ?? "-") \(u.url)")
+    case .upToDate: print("TERKINI")
+    case .failed(let m): print("GAGAL \(m)")
+    }
+    exit(0)
+}
+
 if cliArgs.contains("--selftest-core") {
     CoreSelfTest.run()
     exit(0)

@@ -24,6 +24,7 @@ Versi ditetapkan dalam `Sources/Sapu/Version.swift` sahaja.
 .build/debug/Sapu --selftest-hub    # hab (menyentuh runner dan Terminal sebenar, jalankan tangan)
 .build/debug/Sapu --scan [--big] [--all]   # imbas tanpa GUI
 .build/debug/Sapu --shot <folder>   # tangkap skrin setiap halaman
+.build/debug/Sapu --check-update [versi]   # semak keluaran baru di GitHub
 ```
 
 ## Keluaran
