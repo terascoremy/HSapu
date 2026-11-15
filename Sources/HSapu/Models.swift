@@ -83,7 +83,7 @@ func fmt(_ bytes: Int64) -> String {
 enum Catalog {
     static func blank() -> [CleanCategory] {
         [
-            CleanCategory(id: "system", title: "Sampah sistem", subtitle: "Cache aplikasi, log dan Tong Sampah.", icon: "trash.fill",
+            CleanCategory(id: "system", title: "Sampah sistem", subtitle: "Cache aplikasi, log dan Trash.", icon: "trash.fill",
                           theme: Theme(id: "system", a: Color(hex: 0x0F5A36), b: Color(hex: 0x051D11), glow: Color(hex: 0x2ECC71))),
             CleanCategory(id: "xcode", title: "Xcode", subtitle: "Fail build, simbol peranti dan data simulator.", icon: "hammer.fill",
                           theme: Theme(id: "xcode", a: Color(hex: 0x0C3F85), b: Color(hex: 0x05122B), glow: Color(hex: 0x3B9BFF))),

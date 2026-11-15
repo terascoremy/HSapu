@@ -61,9 +61,9 @@ enum HubSelfTest {
 
         // Imbasan sebenar (baca sahaja)
         let apps = HubScan.apps()
-        check("imbas app: jumpa app", !apps.isEmpty)
-        check("imbas app: faas ada nombor build iOS", apps.contains { $0.bundleId == "my.faas.app" && $0.iosBuild != nil })
-        check("imbas app: iqamah (iOS asli) ada versi", apps.contains { $0.bundleId == "my.iqamah.app" && $0.version != nil })
+        check("scan app: jumpa app", !apps.isEmpty)
+        check("scan app: faas ada nombor build iOS", apps.contains { $0.bundleId == "my.faas.app" && $0.iosBuild != nil })
+        check("scan app: iqamah (iOS asli) ada versi", apps.contains { $0.bundleId == "my.iqamah.app" && $0.version != nil })
         let d = HubScan.docker()
         check("docker: status dibaca (\(d.installed ? (d.running ? "berjalan" : "berhenti") : "tiada"))", true)
         print("   simulator hidup: \(HubScan.bootedSims()), AVD: \(HubScan.avds().count)")

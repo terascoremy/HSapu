@@ -248,7 +248,7 @@ final class AppState: ObservableObject {
             self.refreshDisk()
             self.showErrors = !self.errors.isEmpty
             self.saveCache()
-            History.record(freed: freed, count: done, note: toTrash ? "Pembersih (ke Tong Sampah)" : "Pembersih", items: record)
+            History.record(freed: freed, count: done, note: toTrash ? "Cleaner (ke Trash)" : "Cleaner", items: record)
         }
     }
 
@@ -268,14 +268,14 @@ final class AppState: ObservableObject {
         if Prefs.lowDiskAlert, diskFree < Int64(Prefs.lowDiskGB) * 1_000_000_000,
            Prefs.lastLowDiskNotice.map({ Date().timeIntervalSince($0) > 86400 }) ?? true {
             Prefs.lastLowDiskNotice = Date()
-            Notifier.send(tr("Ruang cakera rendah"), tr("Tinggal \(fmt(diskFree)). Buka HSapu untuk bersihkan."))
+            Notifier.send(tr("Ruang cakera rendah"), tr("Tinggal \(fmt(diskFree)). Buka HSapu untuk clean."))
         }
         let days = Prefs.scanEveryDays
         if days > 0, !scanning, !cleaning,
            Prefs.lastAutoScan.map({ Date().timeIntervalSince($0) > Double(days) * 86400 }) ?? true {
             Prefs.lastAutoScan = Date()
             scan(background: true) { found in
-                if found > 0 { Notifier.send(tr("HSapu jumpa \(fmt(found)) boleh dibersihkan"), tr("Buka HSapu untuk semak dan bersihkan.")) }
+                if found > 0 { Notifier.send(tr("HSapu jumpa \(fmt(found)) boleh di-clean"), tr("Buka HSapu untuk semak dan clean.")) }
             }
         }
     }
@@ -344,7 +344,7 @@ final class AppState: ObservableObject {
             for back in [0, 0, 1, 3, 4, 7, 9, 12, 15, 21] {
                 let t = cal.date(byAdding: .day, value: -back, to: Date())!.addingTimeInterval(Double(-back * 997 % 7200))
                 let items = names.prefix(2 + back % 3).map { HistoryItem(name: $0.0, category: $0.1, how: "Dipadam terus", size: Int64($0.2) / Int64(1 + back % 2)) }
-                fake.append(HistoryEntry(date: t, freed: items.reduce(0) { $0 + $1.size }, count: items.count, note: "Pembersih", items: items))
+                fake.append(HistoryEntry(date: t, freed: items.reduce(0) { $0 + $1.size }, count: items.count, note: "Cleaner", items: items))
             }
             fake.append(HistoryEntry(date: Date().addingTimeInterval(-86400 * 30), freed: 2_000_000_000, count: 1, note: "Worktree", items: nil))
             Store.save(fake, "history.json")

@@ -217,7 +217,7 @@ struct WorktreesView: View {
             }
             .labelsHidden()
             .frame(width: 170)
-            IconButton(icon: "arrow.clockwise", help: "Imbas semula", disabled: hub.loadingWT) { hub.loadWorktrees() }
+            IconButton(icon: "arrow.clockwise", help: "Scan semula", disabled: hub.loadingWT) { hub.loadWorktrees() }
         }
         .padding(.horizontal, 32)
         .padding(.bottom, 12)
@@ -422,9 +422,9 @@ struct DevView: View {
                         Panel {
                             HStack(spacing: 10) {
                                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(warnColor)
-                                Text("Ruang disk tinggal kurang \(Prefs.lowDiskGB) GB. Buka Pembersih untuk bebaskan ruang.").font(.system(size: 13.5, weight: .medium))
+                                Text("Ruang disk tinggal kurang \(Prefs.lowDiskGB) GB. Buka Cleaner untuk bebaskan ruang.").font(.system(size: 13.5, weight: .medium))
                                 Spacer()
-                                PillButton(title: "Buka Pembersih", icon: "sparkles", filled: false) { state.selection = .overview }
+                                PillButton(title: "Buka Cleaner", icon: "sparkles", filled: false) { state.selection = .overview }
                             }
                         }
                     }
@@ -509,7 +509,7 @@ struct MenuBarContent: View {
             }
             line("internaldrive", "\(fmt(state.diskFree)) kosong", state.diskFree < Int64(Prefs.lowDiskGB) * 1_000_000_000 ? badColor : nil) { go(.overview) }
             line("shippingbox.circle", hub.docker.running ? "Docker berjalan, \(hub.docker.up) container aktif" : "Docker tak berjalan", nil) { go(.dev) }
-            line("arrow.triangle.branch", hub.worktrees.isEmpty ? "Worktree belum diimbas" : "\(hub.attentionCount) worktree perlu perhatian, \(hub.safeWorktrees.count) boleh dibuang",
+            line("arrow.triangle.branch", hub.worktrees.isEmpty ? "Worktree belum di-scan" : "\(hub.attentionCount) worktree perlu perhatian, \(hub.safeWorktrees.count) boleh dibuang",
                  hub.attentionCount > 0 ? warnColor : nil) { go(.worktrees) }
             line("shippingbox", "\(hub.apps.count) app dijejak", nil) { go(.builds) }
             line("iphone.gen3", "\(hub.bootedSims) simulator hidup", hub.bootedSims > 0 ? warnColor : nil) { go(.simulators) }
@@ -520,7 +520,7 @@ struct MenuBarContent: View {
             HStack {
                 Button("Buka HSapu") { go(.overview) }
                 Spacer()
-                Button("Imbas semula") { hub.refreshAll() }
+                Button("Scan semula") { hub.refreshAll() }
                 Button("Keluar") { NSApp.terminate(nil) }
             }
             .font(.system(size: 12))

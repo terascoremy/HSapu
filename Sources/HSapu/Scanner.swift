@@ -122,7 +122,7 @@ enum Scanner {
         let trash = home + "/.Trash"
         let ts = size(trash)
         if ts >= MB {
-            items.append(CleanItem(name: "Tong Sampah", path: trash, detail: "Kosongkan terus", size: ts, safety: .safe, action: .deleteContents, selected: true))
+            items.append(CleanItem(name: "Trash", path: trash, detail: "Kosongkan terus", size: ts, safety: .safe, action: .deleteContents, selected: true))
         }
         return items
     }
@@ -133,7 +133,7 @@ enum Scanner {
         let dev = home + "/Library/Developer"
         let defs: [(String, String, String, Safety, CleanAction)] = [
             ("DerivedData", dev + "/Xcode/DerivedData", "Cache build, dibina semula pada build seterusnya", .safe, .deleteContents),
-            ("iOS DeviceSupport", dev + "/Xcode/iOS DeviceSupport", "Simbol peranti, dimuat turun semula bila sambung", .safe, .deleteContents),
+            ("iOS DeviceSupport", dev + "/Xcode/iOS DeviceSupport", "Simbol peranti, di-download semula bila sambung", .safe, .deleteContents),
             ("Cache simulator", dev + "/CoreSimulator/Caches", "Cache dyld simulator", .safe, .deleteContents),
             ("Xcode Archives", dev + "/Xcode/Archives", "Mengandungi dSYM untuk crash report", .review, .deleteContents),
             ("Data semua simulator", dev + "/CoreSimulator/Devices", "App dan login dalam simulator hilang. Saiz ialah anggaran.", .review, .simulatorErase),
@@ -154,13 +154,13 @@ enum Scanner {
 
     static func dev() -> [CleanItem] {
         var defs: [(String, String, String, Safety, CleanAction)] = [
-            ("Gradle cache", home + "/.gradle/caches", "Dimuat turun semula pada build Android", .safe, .delete),
+            ("Gradle cache", home + "/.gradle/caches", "Di-download semula pada build Android", .safe, .delete),
             ("npm cache", home + "/.npm/_cacache", "Cache pakej npm", .safe, .delete),
             ("Yarn cache", home + "/Library/Caches/Yarn", "Cache pakej Yarn", .safe, .delete),
             ("Dart pub cache", home + "/.pub-cache", "Pakej Flutter dan Dart", .review, .delete),
             ("Cargo registry", home + "/.cargo/registry", "Pakej Rust", .safe, .delete),
             ("CocoaPods repos", home + "/.cocoapods/repos", "Spec repo CocoaPods", .safe, .delete),
-            ("Sesi Codex", home + "/.codex/sessions", "Sejarah sesi Codex lama", .review, .delete),
+            ("Sesi Codex", home + "/.codex/sessions", "History sesi Codex lama", .review, .delete),
         ]
         let cache = home + "/.cache"
         for c in children(cache) where !c.hasPrefix(".") {
@@ -310,7 +310,7 @@ enum Scanner {
         }
         let containers: [(String, Set<String>, String)] = [
             (".claude", ["projects"], "Data Claude Code"),
-            (".claude/projects", [], "Sejarah sesi Claude Code untuk projek ini"),
+            (".claude/projects", [], "History sesi Claude Code untuk projek ini"),
             (".codex", ["sessions"], "Data Codex"),
         ]
         var inner = [(path: String, label: String, hint: String)]()
@@ -353,7 +353,7 @@ enum Scanner {
                     let old = Array(files.dropFirst(7))
                     let total = old.reduce(Int64(0)) { $0 + $1.2 }
                     items.append(CleanItem(name: "\(name): sandaran lama", path: p,
-                                           detail: "\(old.count) fail lama, 7 terbaru dikekalkan · dialih ke Tong Sampah",
+                                           detail: "\(old.count) fail lama, 7 terbaru dikekalkan · dialih ke Trash",
                                            size: total, safety: .review, action: .trashList(old.map { $0.0 }), selected: false))
                     continue
                 }
@@ -364,7 +364,7 @@ enum Scanner {
                 safety = .safe
                 hint = "Cache penganalisis Dart, dibina semula"
             } else if lower == ".expo" {
-                hint = "Cache dan tetapan Expo"
+                hint = "Cache dan settings Expo"
             } else if lower.contains("venv") || fm.fileExists(atPath: p + "/pyvenv.cfg") {
                 hint = "Persekitaran Python, boleh dicipta semula"
             } else if lower.hasPrefix("actions-runner") {
@@ -376,7 +376,7 @@ enum Scanner {
                 let when = (attrs?[.modificationDate] as? Date).map { df.string(from: $0) } ?? "tarikh tak diketahui"
                 hint = (dir ? "Folder" : "Fail") + " · diubah \(when)"
             }
-            items.append(CleanItem(name: name, path: p, detail: hint + " · dialih ke Tong Sampah",
+            items.append(CleanItem(name: name, path: p, detail: hint + " · dialih ke Trash",
                                    size: s, safety: safety, action: .trash, selected: safety == .safe))
         }
         for i in inner {
@@ -389,7 +389,7 @@ enum Scanner {
                 if proj.hasPrefix(prefix) { proj = String(proj.dropFirst(prefix.count)) }
                 label = "Sesi Claude: " + proj.replacingOccurrences(of: "--claude-worktrees-", with: " › ")
             }
-            items.append(CleanItem(name: label, path: i.path, detail: i.hint + " · dialih ke Tong Sampah",
+            items.append(CleanItem(name: label, path: i.path, detail: i.hint + " · dialih ke Trash",
                                    size: s, safety: .review, action: .trash, selected: false))
         }
         return items
@@ -445,7 +445,7 @@ enum Scanner {
             var reason: String
             if partial.contains(ext) {
                 safety = .safe
-                reason = "Muat turun tak lengkap"
+                reason = "Download tak lengkap"
             } else if !i.isDir, installers.contains(ext) {
                 safety = .safe
                 reason = "Fail pemasang, tak perlu selepas dipasang"
@@ -461,7 +461,7 @@ enum Scanner {
                 if let d = i.date, d < old { reason += " · lama tak disentuh" }
             }
             guard size >= (safety == .safe ? 100 * 1024 : 5 * MB) else { continue }
-            items.append(CleanItem(name: i.name, path: i.path, detail: reason + " · dialih ke Tong Sampah",
+            items.append(CleanItem(name: i.name, path: i.path, detail: reason + " · dialih ke Trash",
                                    size: size, safety: safety, action: .trash, selected: safety == .safe))
         }
         return items
@@ -482,7 +482,7 @@ enum Scanner {
                 guard let v = try? url.resourceValues(forKeys: Set(keys)), v.isRegularFile == true else { continue }
                 let s = Int64(v.totalFileAllocatedSize ?? v.fileAllocatedSize ?? 0)
                 if s >= 300 * MB {
-                    items.append(CleanItem(name: name, path: url.path, detail: short(url.deletingLastPathComponent().path) + " · dialih ke Tong Sampah",
+                    items.append(CleanItem(name: name, path: url.path, detail: short(url.deletingLastPathComponent().path) + " · dialih ke Trash",
                                            size: s, safety: .review, action: .trash, selected: false))
                 }
             }

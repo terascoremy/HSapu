@@ -6,8 +6,8 @@ import SwiftUI
 func actionLabel(_ item: CleanItem, trash: Bool) -> String {
     if item.path == NSHomeDirectory() + "/.Trash" { return "Dikosongkan terus" }
     switch item.action {
-    case .delete, .deleteContents: return trash ? "Ke Tong Sampah" : "Dipadam terus"
-    case .trash, .trashList: return "Ke Tong Sampah"
+    case .delete, .deleteContents: return trash ? "Ke Trash" : "Dipadam terus"
+    case .trash, .trashList: return "Ke Trash"
     case .worktree: return "Worktree dibuang, branch kekal"
     case .simulatorErase: return "Semua simulator di-erase"
     }
@@ -21,7 +21,7 @@ struct CleanSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Bersihkan \(p.count) item?").font(.system(size: 20, weight: .bold, design: .rounded))
+                Text("Clean \(p.count) item?").font(.system(size: 20, weight: .bold, design: .rounded))
                 Text("\(fmt(p.total)) daripada \(p.title). Semak senarai dulu.").font(.system(size: 13)).opacity(0.7)
             }
             ScrollView {
@@ -50,15 +50,15 @@ struct CleanSheet: View {
             .frame(maxHeight: .infinity)
             Toggle(isOn: $toTrash) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Alih ke Tong Sampah, bukannya padam terus").font(.system(size: 13, weight: .medium))
-                    Text("Boleh dipulihkan, tapi ruang hanya bebas selepas Tong Sampah dikosongkan.").font(.system(size: 11.5)).opacity(0.6)
+                    Text("Alih ke Trash, bukannya padam terus").font(.system(size: 13, weight: .medium))
+                    Text("Boleh dipulihkan, tapi ruang hanya bebas selepas Trash dikosongkan.").font(.system(size: 11.5)).opacity(0.6)
                 }
             }
             .toggleStyle(.switch)
             HStack {
                 Button("Batal") { state.pending = nil }.keyboardShortcut(.cancelAction)
                 Spacer()
-                Button(toTrash ? "Alih \(fmt(p.total))" : "Bersihkan \(fmt(p.total))") {
+                Button(toTrash ? "Alih \(fmt(p.total))" : "Clean \(fmt(p.total))") {
                     Prefs.trashFirst = toTrash
                     state.pending = nil
                     state.clean(categoryID: p.categoryID, toTrash: toTrash)
@@ -104,7 +104,7 @@ struct SettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(icon: "gearshape.fill", title: "Tetapan", subtitle: "Kemas kini, pemantauan, kecualian dan sejarah.",
+            SectionHeader(icon: "gearshape.fill", title: "Settings", subtitle: "Update, monitoring, kecualian dan history.",
                           glow: Theme.overview.glow,
                           trailing: History.totalFreed > 0 ? fmt(History.totalFreed) : nil, trailingNote: "dibebaskan sepanjang masa")
             ScrollView {
@@ -138,7 +138,7 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented).labelsHidden().frame(width: 260)
                 }
-                Text("Pilih bahasa antara muka. Tetapan ini disimpan.").font(.system(size: 12)).opacity(0.6)
+                Text("Pilih bahasa antara muka. Settings ini disimpan.").font(.system(size: 12)).opacity(0.6)
             }
         }
     }
@@ -163,7 +163,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("HSapu").font(.system(size: 20, weight: .bold, design: .rounded))
                         Text("Versi \(appVersion)").font(.system(size: 12.5)).opacity(0.7)
-                        Text("Pembersih Mac dan hab kerja untuk developer.").font(.system(size: 12)).opacity(0.6)
+                        Text("Cleaner Mac dan hab kerja untuk developer.").font(.system(size: 12)).opacity(0.6)
                     }
                     Spacer()
                 }
@@ -188,7 +188,7 @@ struct SettingsView: View {
         Panel {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("Kemas kini").font(.system(size: 15, weight: .semibold))
+                    Text("Update").font(.system(size: 15, weight: .semibold))
                     Chip(text: "Versi \(appVersion)")
                     Spacer()
                     PillButton(title: checking ? "Menyemak" : "Semak sekarang", icon: "arrow.triangle.2.circlepath", filled: false) {
@@ -212,13 +212,13 @@ struct SettingsView: View {
                             if !u.notes.isEmpty { Text(u.notes).font(.system(size: 12)).opacity(0.7).lineLimit(5) }
                         }
                         Spacer()
-                        PillButton(title: downloading ? "Memasang" : "Muat turun dan pasang", icon: "arrow.down.circle", filled: true, tint: Theme.overview.a) {
+                        PillButton(title: downloading ? "Memasang" : "Download dan pasang", icon: "arrow.down.circle", filled: true, tint: Theme.overview.a) {
                             downloading = true
                             Task.detached {
                                 let err = Updater.install(u)
                                 await MainActor.run {
                                     downloading = false
-                                    updateNote = err ?? "HSapu dikemas kini dan akan dibuka semula."
+                                    updateNote = err ?? "HSapu di-update dan akan dibuka semula."
                                 }
                             }
                         }
@@ -226,9 +226,9 @@ struct SettingsView: View {
                     }
                 }
                 if let n = updateNote { Text(n).font(.system(size: 12.5)).opacity(0.8) }
-                Toggle("Semak kemas kini sekali sehari", isOn: Binding(get: { Prefs.checkUpdates }, set: { Prefs.checkUpdates = $0; tick += 1 }))
+                Toggle("Semak update sekali sehari", isOn: Binding(get: { Prefs.checkUpdates }, set: { Prefs.checkUpdates = $0; tick += 1 }))
                     .toggleStyle(.switch).font(.system(size: 13))
-                Text("Kemas kini dimuat turun dari keluaran awam di GitHub (terascoremy/HSapu), disahkan dengan checksum sebelum dipasang.").font(.system(size: 11.5)).opacity(0.55)
+                Text("Update di-download dari keluaran awam di GitHub (terascoremy/HSapu), disahkan dengan checksum sebelum dipasang.").font(.system(size: 11.5)).opacity(0.55)
             }
         }
     }
@@ -238,7 +238,7 @@ struct SettingsView: View {
     var monitorPanel: some View {
         Panel {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Pemantauan").font(.system(size: 15, weight: .semibold))
+                Text("Monitoring").font(.system(size: 15, weight: .semibold))
                 HStack {
                     Toggle("Beritahu bila ruang cakera kurang daripada", isOn: lowDisk).toggleStyle(.switch).font(.system(size: 13))
                     Stepper("\(Prefs.lowDiskGB) GB", value: Binding(get: { Prefs.lowDiskGB }, set: { Prefs.lowDiskGB = $0; tick += 1 }), in: 10...500, step: 10)
@@ -246,7 +246,7 @@ struct SettingsView: View {
                     Spacer()
                 }
                 HStack {
-                    Text("Imbas automatik di latar").font(.system(size: 13))
+                    Text("Scan automatik di latar").font(.system(size: 13))
                     Picker("", selection: scanDays) {
                         Text("Mati").tag(0)
                         Text("Setiap hari").tag(1)
@@ -259,9 +259,9 @@ struct SettingsView: View {
                 Toggle("Buka HSapu semasa log masuk", isOn: Binding(get: { LoginItem.enabled }, set: { loginError = LoginItem.set($0); tick += 1 }))
                     .toggleStyle(.switch).font(.system(size: 13))
                 if let e = loginError { Text(e).font(.system(size: 12)).foregroundStyle(warnColor) }
-                if notifDenied { Text("Notifikasi disekat. Benarkan HSapu dalam Tetapan Sistem > Notifikasi.").font(.system(size: 12)).foregroundStyle(warnColor) }
+                if notifDenied { Text("Notifikasi disekat. Benarkan HSapu dalam Settings Sistem > Notifikasi.").font(.system(size: 12)).foregroundStyle(warnColor) }
                 Text(Notifier.available
-                     ? "Pemantauan hanya berjalan selagi HSapu dibuka (ikon di bar menu)."
+                     ? "Monitoring hanya berjalan selagi HSapu dibuka (ikon di bar menu)."
                      : "Notifikasi hanya berfungsi bila HSapu dibuka sebagai app (.app), bukan dari terminal.")
                     .font(.system(size: 11.5)).opacity(0.55)
             }
@@ -283,12 +283,12 @@ struct SettingsView: View {
                         }
                     }
                     Text(fda == false
-                         ? "Tanpa ini HSapu tak dapat mengimbas folder dilindungi macOS (Safari, Mail, Messages). Folder lain berfungsi seperti biasa."
-                         : "Membolehkan HSapu mengimbas folder dilindungi macOS.")
+                         ? "Tanpa ini HSapu tak dapat scanning folder dilindungi macOS (Safari, Mail, Messages). Folder lain berfungsi seperti biasa."
+                         : "Membolehkan HSapu scanning folder dilindungi macOS.")
                         .font(.system(size: 12)).opacity(0.65).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                PillButton(title: "Buka Tetapan", icon: "lock.open", filled: false) { Access.openSettings() }
+                PillButton(title: "Buka Settings", icon: "lock.open", filled: false) { Access.openSettings() }
                 IconButton(icon: "arrow.clockwise", help: "Semak semula") { fda = Access.fullDisk() }
             }
         }
@@ -305,7 +305,7 @@ struct SettingsView: View {
                     Spacer()
                 }
                 if Exclusions.list.isEmpty {
-                    Text("Klik kanan mana-mana item dalam pembersih dan pilih \"Jangan sentuh\" untuk tambah di sini. Item ini tak akan muncul atau dipadam.")
+                    Text("Klik kanan mana-mana item dalam cleaner dan pilih \"Jangan sentuh\" untuk tambah di sini. Item ini tak akan muncul atau dipadam.")
                         .font(.system(size: 12.5)).opacity(0.65)
                 }
                 ForEach(Exclusions.list, id: \.self) { p in
@@ -313,7 +313,7 @@ struct SettingsView: View {
                         Image(systemName: "lock.shield").opacity(0.6)
                         Text(Scanner.short(p)).font(.system(size: 12.5)).lineLimit(1).truncationMode(.middle)
                         Spacer()
-                        IconButton(icon: "xmark", help: "Benarkan semula (imbas semula untuk nampak)") {
+                        IconButton(icon: "xmark", help: "Benarkan semula (scan semula untuk nampak)") {
                             Exclusions.remove(p)
                             tick += 1
                         }
@@ -330,13 +330,13 @@ struct SettingsView: View {
         return Panel {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Sejarah pembersihan").font(.system(size: 15, weight: .semibold))
-                    Text(list.isEmpty ? "Belum ada pembersihan."
-                         : "\(list.count) pembersihan, \(fmt(History.totalFreed)) dibebaskan sepanjang masa.")
+                    Text("History clean-up").font(.system(size: 15, weight: .semibold))
+                    Text(list.isEmpty ? "Belum ada clean-up."
+                         : "\(list.count) clean-up, \(fmt(History.totalFreed)) dibebaskan sepanjang masa.")
                         .font(.system(size: 12.5)).opacity(0.65)
                 }
                 Spacer()
-                PillButton(title: "Buka sejarah", icon: "clock.arrow.circlepath", filled: false) { state.selection = .history }
+                PillButton(title: "Buka history", icon: "clock.arrow.circlepath", filled: false) { state.selection = .history }
             }
         }
     }

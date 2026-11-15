@@ -72,7 +72,7 @@ struct SimView: View {
                     Text("Runtime").font(.system(size: 15, weight: .semibold))
                     Chip(text: fmt(sims.runtimesSize))
                     Spacer()
-                    Text("Boleh dimuat turun semula dari Xcode").font(.system(size: 11.5)).opacity(0.55)
+                    Text("Boleh di-download semula dari Xcode").font(.system(size: 11.5)).opacity(0.55)
                 }
                 if sims.runtimes.isEmpty { Text("Tiada runtime berasingan.").font(.system(size: 13)).opacity(0.65) }
                 ForEach(sims.runtimes) { r in
@@ -85,7 +85,7 @@ struct SimView: View {
                         Text(fmt(r.size)).font(.system(size: 13, weight: .semibold)).monospacedDigit()
                         IconButton(icon: "trash", help: r.deletable ? "Padam runtime" : "Runtime ini tak boleh dipadam", disabled: !r.deletable || sims.busy) {
                             confirm = Confirm(title: "Padam runtime \(r.name)?",
-                                              message: "\(fmt(r.size)) dibebaskan. \(r.devices) peranti yang menggunakannya tak boleh dihidupkan sehingga runtime dimuat turun semula dari Xcode.",
+                                              message: "\(fmt(r.size)) dibebaskan. \(r.devices) peranti yang menggunakannya tak boleh dihidupkan sehingga runtime di-download semula dari Xcode.",
                                               label: "Padam") { sims.deleteRuntime(r) }
                         }
                     }
@@ -140,7 +140,7 @@ struct SimView: View {
                 Text(m).font(.system(size: 12.5)).opacity(0.85).lineLimit(2)
             }
             Spacer()
-            IconButton(icon: "arrow.clockwise", help: "Imbas semula", disabled: sims.loading || sims.busy) { sims.refresh() }
+            IconButton(icon: "arrow.clockwise", help: "Scan semula", disabled: sims.loading || sims.busy) { sims.refresh() }
             if sims.bootedCount > 0 {
                 PillButton(title: "Matikan \(sims.bootedCount) yang hidup", icon: "power", filled: false) { sims.shutdownAll() }
                     .disabled(sims.busy)

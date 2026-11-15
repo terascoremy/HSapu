@@ -79,16 +79,16 @@ struct HistoryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(icon: "clock.arrow.circlepath", title: "Sejarah",
-                          subtitle: "Apa yang dibersihkan, bila, dan berapa GB.",
+            SectionHeader(icon: "clock.arrow.circlepath", title: "History",
+                          subtitle: "Apa yang di-clean, bila, dan berapa GB.",
                           glow: Theme.overview.glow,
                           trailing: entries.isEmpty ? nil : fmt(total),
                           trailingNote: entries.isEmpty ? nil : (picked == nil ? "dibebaskan dalam \(range.title.lowercased())" : "pada tarikh dipilih"))
             if entries.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "clock").font(.system(size: 40, weight: .semibold)).opacity(0.9)
-                    Text("Belum ada sejarah").font(.system(size: 20, weight: .bold, design: .rounded))
-                    Text("Setiap pembersihan, buang worktree dan tindakan simulator akan direkod di sini.").font(.system(size: 13)).opacity(0.7)
+                    Text("Belum ada history").font(.system(size: 20, weight: .bold, design: .rounded))
+                    Text("Setiap clean-up, buang worktree dan tindakan simulator akan direkod di sini.").font(.system(size: 13)).opacity(0.7)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -142,7 +142,7 @@ struct HistoryView: View {
                 if total > 0 {
                     Text("\(fmt(total)) dipadam pada \(dayTitle(day))").font(.system(size: 15, weight: .semibold))
                 } else {
-                    Text("Tiada pembersihan pada \(dayTitle(day))").font(.system(size: 15, weight: .semibold))
+                    Text("Tiada clean-up pada \(dayTitle(day))").font(.system(size: 15, weight: .semibold))
                 }
                 Spacer()
             }

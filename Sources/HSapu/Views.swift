@@ -61,7 +61,7 @@ struct RootView: View {
         .ignoresSafeArea()
         .id(lang.code)
         .sheet(item: $state.pending) { p in CleanSheet(p: p) }
-        .alert(tr("Ada item tak dapat dibersihkan"), isPresented: $state.showErrors) {
+        .alert(tr("Ada item tak dapat di-clean"), isPresented: $state.showErrors) {
             Button("OK") {}
         } message: {
             Text(state.errors.prefix(5).joined(separator: "\n"))
@@ -113,7 +113,7 @@ struct Sidebar: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 4) {
-                    SidebarRow(icon: "sparkles.rectangle.stack.fill", title: "Ringkasan pembersih", trailing: nil, selected: state.selection == .overview) {
+                    SidebarRow(icon: "sparkles.rectangle.stack.fill", title: "Ringkasan cleaner", trailing: nil, selected: state.selection == .overview) {
                         state.selection = .overview
                     }
                     Text("Kerja")
@@ -139,7 +139,7 @@ struct Sidebar: View {
                                selected: state.selection == .simulators) {
                         state.selection = .simulators
                     }
-                    Text("Pembersihan")
+                    Text("Cleaning")
                         .font(.system(size: 11, weight: .semibold))
                         .opacity(0.5)
                         .padding(.horizontal, 10)
@@ -166,11 +166,11 @@ struct Sidebar: View {
                 }
                 .buttonStyle(.plain)
             }
-            SidebarRow(icon: "clock.arrow.circlepath", title: "Sejarah", trailing: History.totalFreed > 0 ? fmt(History.totalFreed) : nil,
+            SidebarRow(icon: "clock.arrow.circlepath", title: "History", trailing: History.totalFreed > 0 ? fmt(History.totalFreed) : nil,
                        selected: state.selection == .history) {
                 state.selection = .history
             }
-            SidebarRow(icon: "gearshape.fill", title: "Tetapan", trailing: nil, selected: state.selection == .settings) {
+            SidebarRow(icon: "gearshape.fill", title: "Settings", trailing: nil, selected: state.selection == .settings) {
                 state.selection = .settings
             }
             VStack(alignment: .leading, spacing: 6) {
@@ -230,8 +230,8 @@ struct OverviewView: View {
     @EnvironmentObject var state: AppState
 
     var headline: String {
-        if state.scanning && !state.hasScanned { return "Sedang mengimbas" }
-        if let f = state.lastFreed { return state.lastWasTrash ? "\(fmt(f)) dialih ke Tong Sampah" : "\(fmt(f)) dibebaskan" }
+        if state.scanning && !state.hasScanned { return "Sedang scanning" }
+        if let f = state.lastFreed { return state.lastWasTrash ? "\(fmt(f)) dialih ke Trash" : "\(fmt(f)) dibebaskan" }
         if state.hasScanned { return state.totalFound > 0 ? "\(fmt(state.totalFound)) dijumpai" : "Mac ni dah kemas" }
         return "Jom kemas Mac ni"
     }
@@ -239,13 +239,13 @@ struct OverviewView: View {
     var subline: String {
         if state.scanning && !state.hasScanned { return "\(state.scannedCount) daripada \(state.categories.count) kategori siap." }
         if state.hasScanned {
-            if state.scanning { return "Mengemas kini di latar. Hasil imbasan terakhir dipaparkan dulu." }
-            if state.lastWasTrash, state.lastFreed != nil { return "Kosongkan Tong Sampah untuk bebaskan ruang sebenar." }
+            if state.scanning { return "Mengemas kini di latar. Hasil scan terakhir dipaparkan dulu." }
+            if state.lastWasTrash, state.lastFreed != nil { return "Kosongkan Trash untuk bebaskan ruang sebenar." }
             return state.totalSelected > 0
                 ? "\(fmt(state.totalSelected)) dah dipilih sebab selamat dibuang. Buka kategori untuk pilih yang lain."
                 : "Tiada yang dipilih. Buka kategori untuk pilih item."
         }
-        return "Imbas untuk cari cache, fail build, worktree lama dan fail besar."
+        return "Scan untuk cari cache, fail build, worktree lama dan fail besar."
     }
 
     var body: some View {
@@ -256,7 +256,7 @@ struct OverviewView: View {
                     Text(headline).font(.system(size: 36, weight: .bold, design: .rounded))
                     Text(subline).font(.system(size: 15)).opacity(0.8).fixedSize(horizontal: false, vertical: true)
                     if let d = state.lastScan, state.hasScanned {
-                        Text("Imbasan terakhir \(ago(d))" + (History.totalFreed > 0 ? " · \(fmt(History.totalFreed)) dibebaskan sepanjang masa" : ""))
+                        Text("Scan terakhir \(ago(d))" + (History.totalFreed > 0 ? " · \(fmt(History.totalFreed)) dibebaskan sepanjang masa" : ""))
                             .font(.system(size: 12)).opacity(0.55)
                     }
                 }
@@ -281,9 +281,9 @@ struct OverviewView: View {
             ScanProgress()
         } else if state.hasScanned {
             HStack(spacing: 12) {
-                PillButton(title: state.scanning ? "Mengimbas" : "Imbas semula", icon: "arrow.clockwise", filled: false) { state.scan() }
+                PillButton(title: state.scanning ? "Scanning" : "Scan semula", icon: "arrow.clockwise", filled: false) { state.scan() }
                     .disabled(state.scanning)
-                PillButton(title: state.totalSelected > 0 ? "Bersihkan \(fmt(state.totalSelected))" : "Tiada pilihan",
+                PillButton(title: state.totalSelected > 0 ? "Clean \(fmt(state.totalSelected))" : "Tiada pilihan",
                            icon: "sparkles", filled: true, tint: state.theme.a) { state.requestClean(categoryID: nil) }
                     .disabled(state.totalSelected == 0 || state.scanning)
                     .opacity(state.totalSelected == 0 || state.scanning ? 0.5 : 1)
@@ -342,9 +342,9 @@ struct CategoryCard: View {
                         Text(cat.total > 0 ? fmt(cat.total) : "Bersih").font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit()
                     } else if scanning {
                         ProgressView().controlSize(.small).tint(.white)
-                        Text("Mengimbas").font(.system(size: 12)).opacity(0.6)
+                        Text("Scanning").font(.system(size: 12)).opacity(0.6)
                     } else {
-                        Text("Belum diimbas").font(.system(size: 12)).opacity(0.5)
+                        Text("Belum di-scan").font(.system(size: 12)).opacity(0.5)
                     }
                     Spacer(minLength: 0)
                 }
@@ -380,7 +380,7 @@ struct ScanButton: View {
                         .onAppear { spin = true }
                         .onDisappear { spin = false }
                 }
-                Text(scanning ? "Mengimbas" : "Imbas").font(.system(size: scanning ? 14 : 19, weight: .semibold, design: .rounded))
+                Text(scanning ? "Scanning" : "Scan").font(.system(size: scanning ? 14 : 19, weight: .semibold, design: .rounded))
             }
             .frame(width: 112, height: 112)
             .shadow(color: .white.opacity(0.25), radius: 24)
@@ -471,12 +471,12 @@ struct CategoryView: View {
         if state.scanning {
             VStack(spacing: 12) {
                 ProgressView().controlSize(.large).tint(.white)
-                Text("Mengimbas").font(.system(size: 14)).opacity(0.7)
+                Text("Scanning").font(.system(size: 14)).opacity(0.7)
             }
         } else {
             VStack(spacing: 16) {
-                message(icon: "magnifyingglass", title: "Belum diimbas", text: "Imbas dulu untuk lihat apa yang boleh dibuang.")
-                PillButton(title: "Imbas sekarang", icon: "sparkles", filled: true, tint: state.theme.a) { state.scan() }
+                message(icon: "magnifyingglass", title: "Belum di-scan", text: "Scan dulu untuk lihat apa yang boleh dibuang.")
+                PillButton(title: "Scan sekarang", icon: "sparkles", filled: true, tint: state.theme.a) { state.scan() }
             }
         }
     }
@@ -599,7 +599,7 @@ struct CategoryView: View {
             Spacer()
             Text("\(cat.selectedItems.count) dipilih" + (hidden > 0 ? " (\(hidden) tersembunyi oleh tapisan)" : ""))
                 .font(.system(size: 13)).opacity(hidden > 0 ? 0.95 : 0.75).foregroundStyle(hidden > 0 ? warnColor : Color.white)
-            PillButton(title: cat.selectedSize > 0 ? "Bersihkan \(fmt(cat.selectedSize))" : "Bersihkan",
+            PillButton(title: cat.selectedSize > 0 ? "Clean \(fmt(cat.selectedSize))" : "Clean",
                        icon: "sparkles", filled: true, tint: cat.theme.a) { state.requestClean(categoryID: categoryID) }
                 .disabled(cat.selectedItems.isEmpty || state.scanning)
                 .opacity(cat.selectedItems.isEmpty || state.scanning ? 0.5 : 1)
@@ -701,7 +701,7 @@ struct CleaningOverlay: View {
         ZStack {
             Color.black.opacity(0.55)
             VStack(spacing: 14) {
-                Text("Sedang membersih").font(.system(size: 20, weight: .bold, design: .rounded))
+                Text("Sedang cleaning").font(.system(size: 20, weight: .bold, design: .rounded))
                 ProgressView(value: state.cleanProgress).tint(.white).frame(width: 300)
                 Text(state.cleanLabel).font(.system(size: 12)).opacity(0.7).lineLimit(1).truncationMode(.middle).frame(width: 300)
             }
@@ -723,7 +723,7 @@ struct ScanProgress: View {
                 ProgressView().controlSize(.small).tint(.white)
                 TimelineView(.periodic(from: .now, by: 1)) { ctx in
                     let secs = Int(ctx.date.timeIntervalSince(state.scanStart ?? ctx.date))
-                    Text("Mengimbas \(state.scanDone) daripada \(state.scanTotal) kategori · \(secs) saat")
+                    Text("Scanning \(state.scanDone) daripada \(state.scanTotal) kategori · \(secs) saat")
                         .font(.system(size: 13, weight: .semibold)).monospacedDigit()
                 }
                 Spacer()
@@ -773,7 +773,7 @@ struct ScanPill: View {
     var body: some View {
         HStack(spacing: 8) {
             ProgressView().controlSize(.small).tint(.white)
-            Text("Mengimbas \(state.scanDone)/\(state.scanTotal)").font(.system(size: 12, weight: .semibold)).monospacedDigit()
+            Text("Scanning \(state.scanDone)/\(state.scanTotal)").font(.system(size: 12, weight: .semibold)).monospacedDigit()
             ScanBar(fraction: state.scanFraction, height: 5).frame(width: 90)
         }
         .padding(.horizontal, 12)

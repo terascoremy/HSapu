@@ -2,6 +2,9 @@
 
 Setiap kemas kini: naikkan `appVersion` dalam `Sources/HSapu/Version.swift`, tambah entri di sini, commit, kemudian `git tag vX.Y.Z`.
 
+## 1.4.1 (2026-11-15)
+- **BM campur istilah English:** teks Melayu kini guna istilah biasa dalam English (Settings, History, Update, Download, Scan, Clean, Cleaner, Trash, Monitoring), macam orang sebenarnya bercakap tentang software.
+
 ## 1.4.0 (2026-11-15)
 - **Sapu menjadi HSapu:** nama baharu, repo awam baharu (`terascoremy/HSapu`) dan laman rasmi di terascore.my/hsapu. Data lama dalam `~/Library/Application Support/Sapu` dipindahkan secara automatik.
 - **Dipasang dan dikemas kini seperti HStat:** DMG ditandatangani dengan Developer ID dan dinotarize Apple, dimuat turun dari terascore.my/hsapu. GitHub hanya menyimpan pakej kemas kini kecil (`HSapu-update-<versi>.zip` dan `.sha256`).
