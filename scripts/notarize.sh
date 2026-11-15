@@ -1,24 +1,12 @@
-#!/bin/bash
-# Tanda tangan dengan Developer ID, hantar ke Apple untuk notarize, dan staple.
-# Perlukan akaun Apple Developer (berbayar). Tanpa ini Sapu hanya bertanda tangan ad-hoc
-# dan Gatekeeper akan beri amaran (klik kanan > Open).
-#
-# Sekali sahaja, simpan kelayakan dalam Keychain:
-#   xcrun notarytool store-credentials sapu-notary --apple-id <emel> --team-id <TEAMID> --password <app-specific-password>
-#
-# Kemudian:
-#   SIGN_ID="Developer ID Application: Nama Kau (TEAMID)" ./scripts/notarize.sh
-set -euo pipefail
-cd "$(dirname "$0")/.."
-: "${SIGN_ID:?Set SIGN_ID kepada nama sijil Developer ID Application}"
-PROFILE="${NOTARY_PROFILE:-sapu-notary}"
-
-SIGN_ID="$SIGN_ID" ./scripts/build.sh
-DMG=$(ls dist/Sapu-*.dmg | head -1)
-
-echo "Hantar $DMG untuk notarize (boleh ambil beberapa minit)..."
-xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait
-xcrun stapler staple "$DMG"
-xcrun stapler validate "$DMG"
-spctl --assess --type open --context context:primary-signature -v "$DMG" || true
-echo "Siap: $DMG sudah di-notarize."
+#!/bin/zsh
+# Sign with Developer ID, notarize with Apple and staple the ticket to build/HSapu.app.
+# Needs (env or scripts/signing.env):  SIGN_IDENTITY="Developer ID Application: Name (TEAMID)"  NOTARY_PROFILE="hstat-notary"
+set -e; cd "$(dirname "$0")/.."
+[ -f scripts/signing.env ] && source scripts/signing.env
+: "${SIGN_IDENTITY:?set SIGN_IDENTITY}"; : "${NOTARY_PROFILE:?set NOTARY_PROFILE}"
+./build_app.sh
+ditto -ck --keepParent build/HSapu.app build/notarize.zip
+xcrun notarytool submit build/notarize.zip --keychain-profile "$NOTARY_PROFILE" --wait
+xcrun stapler staple build/HSapu.app
+rm -f build/notarize.zip
+spctl -a -vv build/HSapu.app

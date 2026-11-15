@@ -114,12 +114,52 @@ struct SettingsView: View {
                     accessPanel
                     exclusionsPanel
                     historyPanel
+                    aboutPanel
                 }
                 .padding(.horizontal, 32)
                 .padding(.bottom, 24)
             }
         }
         .id(tick)
+    }
+
+    // tentang
+
+    func linkRow(_ k: String, _ v: String, _ url: String, _ icon: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon).font(.system(size: 11)).opacity(0.6).frame(width: 16)
+            Text(k).opacity(0.65)
+            Spacer(minLength: 8)
+            Link(v, destination: URL(string: url)!).lineLimit(1)
+        }
+        .font(.system(size: 12.5))
+    }
+
+    var aboutPanel: some View {
+        Panel {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 14) {
+                    Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 56, height: 56)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("HSapu").font(.system(size: 20, weight: .bold, design: .rounded))
+                        Text("Versi \(appVersion)").font(.system(size: 12.5)).opacity(0.7)
+                        Text("Pembersih Mac dan hab kerja untuk developer.").font(.system(size: 12)).opacity(0.6)
+                    }
+                    Spacer()
+                }
+                Divider().opacity(0.3)
+                HStack(spacing: 8) {
+                    Image(systemName: "building.2.fill").font(.system(size: 11)).opacity(0.6).frame(width: 16)
+                    Text("Pembangun").opacity(0.65); Spacer(minLength: 8); Text(appDeveloper)
+                }.font(.system(size: 12.5))
+                linkRow("Laman pembangun", "terascore.my", "https://terascore.my", "globe")
+                linkRow("Hubungi", "admin@terascore.my", "mailto:admin@terascore.my?subject=HSapu", "envelope.fill")
+                linkRow("Laman HSapu", "terascore.my/hsapu", appSite, "safari.fill")
+                linkRow("Keluaran", "github.com/\(appRepo)", "https://github.com/\(appRepo)/releases", "shippingbox.fill")
+                linkRow("Maklum balas", "Lapor isu atau idea", "https://github.com/\(appRepo)/issues", "bubble.left.and.text.bubble.right.fill")
+                Text("\u{00A9} 2026 \(appDeveloper)").font(.system(size: 11.5)).opacity(0.55)
+            }
+        }
     }
 
     // kemas kini
@@ -138,7 +178,7 @@ struct SettingsView: View {
                             checking = false
                             switch r {
                             case .available(let i): updateNote = "Versi \(i.version) tersedia."
-                            case .upToDate: updateNote = "Sapu dah versi terkini."
+                            case .upToDate: updateNote = "HSapu dah versi terkini."
                             case .failed(let m): updateNote = m
                             }
                         }
@@ -152,23 +192,23 @@ struct SettingsView: View {
                             if !u.notes.isEmpty { Text(u.notes).font(.system(size: 12)).opacity(0.7).lineLimit(5) }
                         }
                         Spacer()
-                        PillButton(title: downloading ? "Memuat turun" : "Muat turun", icon: "arrow.down.circle", filled: true, tint: Theme.overview.a) {
+                        PillButton(title: downloading ? "Memasang" : "Muat turun dan pasang", icon: "arrow.down.circle", filled: true, tint: Theme.overview.a) {
                             downloading = true
                             Task.detached {
-                                let err = Updater.download(u)
+                                let err = Updater.install(u)
                                 await MainActor.run {
                                     downloading = false
-                                    updateNote = err ?? "Dmg dibuka. Seret Sapu ke Applications untuk ganti versi lama."
+                                    updateNote = err ?? "HSapu dikemas kini dan akan dibuka semula."
                                 }
                             }
                         }
-                        .disabled(downloading || u.dmgName == nil)
+                        .disabled(downloading || u.packageURL == nil)
                     }
                 }
                 if let n = updateNote { Text(n).font(.system(size: 12.5)).opacity(0.8) }
                 Toggle("Semak kemas kini sekali sehari", isOn: Binding(get: { Prefs.checkUpdates }, set: { Prefs.checkUpdates = $0; tick += 1 }))
                     .toggleStyle(.switch).font(.system(size: 13))
-                Text("Semakan guna GitHub CLI (gh) yang dah log masuk, sebab repo Sapu peribadi.").font(.system(size: 11.5)).opacity(0.55)
+                Text("Kemas kini dimuat turun dari keluaran awam di GitHub (terascoremy/HSapu), disahkan dengan checksum sebelum dipasang.").font(.system(size: 11.5)).opacity(0.55)
             }
         }
     }
@@ -196,13 +236,13 @@ struct SettingsView: View {
                     .frame(width: 150)
                     Spacer()
                 }
-                Toggle("Buka Sapu semasa log masuk", isOn: Binding(get: { LoginItem.enabled }, set: { loginError = LoginItem.set($0); tick += 1 }))
+                Toggle("Buka HSapu semasa log masuk", isOn: Binding(get: { LoginItem.enabled }, set: { loginError = LoginItem.set($0); tick += 1 }))
                     .toggleStyle(.switch).font(.system(size: 13))
                 if let e = loginError { Text(e).font(.system(size: 12)).foregroundStyle(warnColor) }
-                if notifDenied { Text("Notifikasi disekat. Benarkan Sapu dalam Tetapan Sistem > Notifikasi.").font(.system(size: 12)).foregroundStyle(warnColor) }
+                if notifDenied { Text("Notifikasi disekat. Benarkan HSapu dalam Tetapan Sistem > Notifikasi.").font(.system(size: 12)).foregroundStyle(warnColor) }
                 Text(Notifier.available
-                     ? "Pemantauan hanya berjalan selagi Sapu dibuka (ikon di bar menu)."
-                     : "Notifikasi hanya berfungsi bila Sapu dibuka sebagai app (.app), bukan dari terminal.")
+                     ? "Pemantauan hanya berjalan selagi HSapu dibuka (ikon di bar menu)."
+                     : "Notifikasi hanya berfungsi bila HSapu dibuka sebagai app (.app), bukan dari terminal.")
                     .font(.system(size: 11.5)).opacity(0.55)
             }
         }
@@ -223,8 +263,8 @@ struct SettingsView: View {
                         }
                     }
                     Text(fda == false
-                         ? "Tanpa ini Sapu tak dapat mengimbas folder dilindungi macOS (Safari, Mail, Messages). Folder lain berfungsi seperti biasa."
-                         : "Membolehkan Sapu mengimbas folder dilindungi macOS.")
+                         ? "Tanpa ini HSapu tak dapat mengimbas folder dilindungi macOS (Safari, Mail, Messages). Folder lain berfungsi seperti biasa."
+                         : "Membolehkan HSapu mengimbas folder dilindungi macOS.")
                         .font(.system(size: 12)).opacity(0.65).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()

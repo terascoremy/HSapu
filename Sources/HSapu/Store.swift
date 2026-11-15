@@ -10,7 +10,12 @@ enum AppSupport {
     static var override: String?
 
     static var dir: String {
-        let d = override ?? (NSHomeDirectory() + "/Library/Application Support/Sapu")
+        let base = NSHomeDirectory() + "/Library/Application Support"
+        let d = override ?? (base + "/HSapu")
+        // keep data from the app's earlier name (Sapu)
+        if override == nil, !FileManager.default.fileExists(atPath: d), FileManager.default.fileExists(atPath: base + "/Sapu") {
+            try? FileManager.default.moveItem(atPath: base + "/Sapu", toPath: d)
+        }
         try? FileManager.default.createDirectory(atPath: d, withIntermediateDirectories: true)
         return d
     }

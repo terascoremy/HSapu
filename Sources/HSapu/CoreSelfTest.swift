@@ -211,10 +211,10 @@ enum CoreSelfTest {
         check("versi: 1.10.0 lebih baru daripada 1.9.9", Updater.newer("v1.10.0", than: "1.9.9"))
         check("versi: sama bukan lebih baru", !Updater.newer("1.1.0", than: "1.1.0") && !Updater.newer("1.1", than: "1.1.0"))
         check("versi: lebih lama ditolak", !Updater.newer("1.0.9", than: "1.1.0"))
-        let json = #"{"tagName":"v1.2.0","url":"https://x/y","body":"nota","assets":[{"name":"Sapu-1.2.0.dmg"}]}"#
+        let json = #"{"tag_name":"v1.2.0","html_url":"https://x/y","body":"nota","assets":[{"name":"HSapu-update-1.2.0.zip","browser_download_url":"https://github.com/a/b/z.zip"}]}"#
         if case .available(let i) = Updater.parse(json, current: "1.1.0") {
-            check("kemas kini: keluaran baru dikesan dengan dmg", i.version == "1.2.0" && i.dmgName == "Sapu-1.2.0.dmg" && i.notes == "nota")
-        } else { check("kemas kini: keluaran baru dikesan dengan dmg", false) }
+            check("kemas kini: keluaran baru dikesan dengan pakej", i.version == "1.2.0" && i.package == "HSapu-update-1.2.0.zip" && i.notes == "nota")
+        } else { check("kemas kini: keluaran baru dikesan dengan pakej", false) }
         if case .upToDate = Updater.parse(json, current: "1.2.0") { check("kemas kini: versi sama dikesan terkini", true) } else { check("kemas kini: versi sama dikesan terkini", false) }
         if case .failed = Updater.parse("bukan json", current: "1.0.0") { check("kemas kini: jawapan rosak ditangani", true) } else { check("kemas kini: jawapan rosak ditangani", false) }
 

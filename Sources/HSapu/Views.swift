@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-struct SapuApp: App {
+struct HSapuApp: App {
     @StateObject private var state = AppState()
     @StateObject private var hub = HubState()
     @StateObject private var sims = SimState()
@@ -103,7 +103,7 @@ struct Sidebar: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 10) {
                 Image(systemName: "sparkles").font(.system(size: 20, weight: .bold))
-                Text("Sapu").font(.system(size: 22, weight: .bold, design: .rounded))
+                Text("HSapu").font(.system(size: 22, weight: .bold, design: .rounded))
             }
             .padding(.top, 46)
             .padding(.horizontal, 10)

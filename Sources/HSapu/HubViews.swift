@@ -503,7 +503,7 @@ struct MenuBarContent: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: "sparkles")
-                Text("Sapu").font(.system(size: 14, weight: .bold, design: .rounded))
+                Text("HSapu").font(.system(size: 14, weight: .bold, design: .rounded))
                 Spacer()
             }
             line("internaldrive", "\(fmt(state.diskFree)) kosong", state.diskFree < Int64(Prefs.lowDiskGB) * 1_000_000_000 ? badColor : nil) { go(.overview) }
@@ -513,11 +513,11 @@ struct MenuBarContent: View {
             line("shippingbox", "\(hub.apps.count) app dijejak", nil) { go(.builds) }
             line("iphone.gen3", "\(hub.bootedSims) simulator hidup", hub.bootedSims > 0 ? warnColor : nil) { go(.simulators) }
             if let u = state.update {
-                line("arrow.down.circle", "Sapu \(u.version) tersedia", okColor) { go(.settings) }
+                line("arrow.down.circle", "HSapu \(u.version) tersedia", okColor) { go(.settings) }
             }
             Divider()
             HStack {
-                Button("Buka Sapu") { go(.overview) }
+                Button("Buka HSapu") { go(.overview) }
                 Spacer()
                 Button("Imbas semula") { hub.refreshAll() }
                 Button("Keluar") { NSApp.terminate(nil) }

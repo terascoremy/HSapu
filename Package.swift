@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "Sapu",
+    name: "HSapu",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "Sapu", path: "Sources/Sapu")
+        .executableTarget(name: "HSapu", path: "Sources/HSapu")
     ]
 )

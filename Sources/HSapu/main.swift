@@ -10,7 +10,7 @@ if cliArgs.contains("--selftest") {
 if let i = cliArgs.firstIndex(of: "--check-update") {
     let cur = i + 1 < cliArgs.count ? cliArgs[i + 1] : appVersion
     switch Updater.check(current: cur) {
-    case .available(let u): print("TERSEDIA \(u.version) dmg=\(u.dmgName ?? "-") \(u.url)")
+    case .available(let u): print("TERSEDIA \(u.version) pakej=\(u.package ?? "-") \(u.url)")
     case .upToDate: print("TERKINI")
     case .failed(let m): print("GAGAL \(m)")
     }
@@ -52,4 +52,4 @@ if cliArgs.contains("--scan") {
     exit(0)
 }
 
-SapuApp.main()
+HSapuApp.main()

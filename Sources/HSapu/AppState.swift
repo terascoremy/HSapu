@@ -268,14 +268,14 @@ final class AppState: ObservableObject {
         if Prefs.lowDiskAlert, diskFree < Int64(Prefs.lowDiskGB) * 1_000_000_000,
            Prefs.lastLowDiskNotice.map({ Date().timeIntervalSince($0) > 86400 }) ?? true {
             Prefs.lastLowDiskNotice = Date()
-            Notifier.send("Ruang cakera rendah", "Tinggal \(fmt(diskFree)). Buka Sapu untuk bersihkan.")
+            Notifier.send("Ruang cakera rendah", "Tinggal \(fmt(diskFree)). Buka HSapu untuk bersihkan.")
         }
         let days = Prefs.scanEveryDays
         if days > 0, !scanning, !cleaning,
            Prefs.lastAutoScan.map({ Date().timeIntervalSince($0) > Double(days) * 86400 }) ?? true {
             Prefs.lastAutoScan = Date()
             scan(background: true) { found in
-                if found > 0 { Notifier.send("Sapu jumpa \(fmt(found)) boleh dibersihkan", "Buka Sapu untuk semak dan bersihkan.") }
+                if found > 0 { Notifier.send("HSapu jumpa \(fmt(found)) boleh dibersihkan", "Buka HSapu untuk semak dan bersihkan.") }
             }
         }
     }
