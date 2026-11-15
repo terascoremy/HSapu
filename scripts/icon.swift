@@ -10,8 +10,8 @@ NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
 let rect = NSRect(x: 100, y: 100, width: 824, height: 824)
 let path = NSBezierPath(roundedRect: rect, xRadius: 186, yRadius: 186)
 NSGradient(colors: [
-    NSColor(red: 0.36, green: 0.22, blue: 0.95, alpha: 1),
-    NSColor(red: 0.86, green: 0.34, blue: 0.98, alpha: 1),
+    NSColor(red: 0.93, green: 0.18, blue: 0.48, alpha: 1),
+    NSColor(red: 1.0, green: 0.52, blue: 0.72, alpha: 1),
 ])!.draw(in: path, angle: 60)
 
 let cfg = NSImage.SymbolConfiguration(pointSize: 430, weight: .semibold)
