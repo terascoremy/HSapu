@@ -483,7 +483,7 @@ func ago(_ d: Date?) -> String {
     guard let d else { return "tarikh tak diketahui" }
     if abs(d.timeIntervalSinceNow) < 60 { return "baru sebentar tadi" }
     let f = RelativeDateTimeFormatter()
-    f.locale = Locale(identifier: "ms_MY")
+    f.locale = Lang.locale
     f.unitsStyle = .short
     return f.localizedString(for: d, relativeTo: Date())
 }

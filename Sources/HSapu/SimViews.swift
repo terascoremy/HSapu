@@ -55,7 +55,7 @@ struct SimView: View {
             bottom
         }
         .onAppear { if !sims.loaded { sims.refresh() } }
-        .alert(confirm?.title ?? "", isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } })) {
+        .alert(tr(confirm?.title ?? ""), isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } })) {
             if let c = confirm {
                 Button("Batal", role: .cancel) {}
                 Button(c.label, role: .destructive) { c.run() }

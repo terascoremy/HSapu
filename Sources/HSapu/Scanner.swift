@@ -321,7 +321,7 @@ enum Scanner {
         }
         let sz = fastSizes(top + inner.map { $0.path })
         let df = DateFormatter()
-        df.locale = Locale(identifier: "ms_MY")
+        df.locale = Lang.locale
         df.dateFormat = "d MMM yyyy"
         var items = [CleanItem]()
 
@@ -428,7 +428,7 @@ enum Scanner {
         for i in info where !i.isDir { fileSize[i.name] = i.size }
 
         let df = DateFormatter()
-        df.locale = Locale(identifier: "ms_MY")
+        df.locale = Lang.locale
         df.dateFormat = "d MMM yyyy"
         let installers: Set<String> = ["dmg", "pkg", "mpkg", "xip", "iso"]
         let partial: Set<String> = ["crdownload", "download", "part"]

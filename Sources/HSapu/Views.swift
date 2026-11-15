@@ -38,6 +38,7 @@ struct HSapuApp: App {
 
 struct RootView: View {
     @EnvironmentObject var state: AppState
+    @ObservedObject private var lang = Lang.shared
 
     var body: some View {
         ZStack {
@@ -58,8 +59,9 @@ struct RootView: View {
         .frame(minWidth: 1100, minHeight: 780)
         .foregroundStyle(.white)
         .ignoresSafeArea()
+        .id(lang.code)
         .sheet(item: $state.pending) { p in CleanSheet(p: p) }
-        .alert("Ada item tak dapat dibersihkan", isPresented: $state.showErrors) {
+        .alert(tr("Ada item tak dapat dibersihkan"), isPresented: $state.showErrors) {
             Button("OK") {}
         } message: {
             Text(state.errors.prefix(5).joined(separator: "\n"))
@@ -610,7 +612,7 @@ struct CategoryView: View {
 
 func shortDate(_ d: Date) -> String {
     let f = DateFormatter()
-    f.locale = Locale(identifier: "ms_MY")
+    f.locale = Lang.locale
     f.dateFormat = "d MMM yyyy"
     return f.string(from: d)
 }

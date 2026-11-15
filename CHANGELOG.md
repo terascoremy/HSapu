@@ -7,6 +7,8 @@ Setiap kemas kini: naikkan `appVersion` dalam `Sources/HSapu/Version.swift`, tam
 - **Dipasang dan dikemas kini seperti HStat:** DMG ditandatangani dengan Developer ID dan dinotarize Apple, dimuat turun dari terascore.my/hsapu. GitHub hanya menyimpan pakej kemas kini kecil (`HSapu-update-<versi>.zip` dan `.sha256`).
 - **Kemas kini dalam app:** Tetapan, Kemas kini kini menyemak keluaran awam di GitHub tanpa `gh`, mengesahkan checksum, menggantikan app dan membuka semula. Tiada lagi dmg dimuat turun ke Downloads.
 - **Tentang:** kad Tentang dalam Tetapan dengan pembangun (Teras Core Technology Sdn. Bhd.), laman web, emel dan pautan keluaran.
+- **Dua bahasa:** Bahasa Melayu dan English, dipilih di Tetapan, Bahasa. Disimpan dan terpakai serta-merta.
+- **Warna utama pink:** ikon app dan tema ringkasan, tetapan dan sejarah kini pink. Warna kategori lain kekal.
 - Binaan universal (Apple silicon dan Intel).
 
 ## 1.3.1 (2026-11-14)

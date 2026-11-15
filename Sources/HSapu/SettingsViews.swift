@@ -109,6 +109,7 @@ struct SettingsView: View {
                           trailing: History.totalFreed > 0 ? fmt(History.totalFreed) : nil, trailingNote: "dibebaskan sepanjang masa")
             ScrollView {
                 VStack(spacing: 14) {
+                    languagePanel
                     updatesPanel
                     monitorPanel
                     accessPanel
@@ -121,6 +122,25 @@ struct SettingsView: View {
             }
         }
         .id(tick)
+    }
+
+    // bahasa
+
+    var languagePanel: some View {
+        Panel {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text("Bahasa").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Picker("", selection: Binding(get: { Lang.shared.code }, set: { Lang.shared.code = $0; tick += 1 })) {
+                        Text(verbatim: "Bahasa Melayu").tag("ms")
+                        Text(verbatim: "English").tag("en")
+                    }
+                    .pickerStyle(.segmented).labelsHidden().frame(width: 260)
+                }
+                Text("Pilih bahasa antara muka. Tetapan ini disimpan.").font(.system(size: 12)).opacity(0.6)
+            }
+        }
     }
 
     // tentang

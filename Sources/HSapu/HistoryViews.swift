@@ -21,7 +21,7 @@ enum HistoryRange: Int, CaseIterable {
 
 func dayTitle(_ d: Date) -> String {
     let f = DateFormatter()
-    f.locale = Locale(identifier: "ms_MY")
+    f.locale = Lang.locale
     f.dateFormat = "EEEE, d MMMM yyyy"
     let base = f.string(from: d)
     if Calendar.current.isDateInToday(d) { return "Hari ini · " + base }

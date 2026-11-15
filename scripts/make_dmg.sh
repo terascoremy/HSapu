@@ -11,7 +11,7 @@ rm -rf "$STAGE"
 if [ -n "$SIGN_IDENTITY" ] && [ "$SIGN_IDENTITY" != "-" ]; then
   codesign --force --timestamp --sign "$SIGN_IDENTITY" "dist/HSapu-$VER.dmg"
   if [ -n "$NOTARY_PROFILE" ]; then
-    xcrun notarytool submit "dist/HSapu-$VER.dmg" --keychain-profile "$NOTARY_PROFILE" --wait
+    xcrun notarytool submit "dist/HSapu-$VER.dmg" ${=NOTARY_AUTH} --wait
     xcrun stapler staple "dist/HSapu-$VER.dmg"
   fi
 fi

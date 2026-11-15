@@ -191,14 +191,14 @@ struct WorktreesView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             bottom
         }
-        .alert("Buang \(bulk.count) worktree?", isPresented: $confirmBulk) {
+        .alert(tr("Buang \(bulk.count) worktree?"), isPresented: $confirmBulk) {
             let list = bulk
             Button("Batal", role: .cancel) {}
             Button("Buang", role: .destructive) { hub.remove(list) }
         } message: {
             Text("Semuanya dah merge dan bersih. Folder dibuang, branch kekal dalam repo.")
         }
-        .alert("Buang worktree ini?", isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
+        .alert(tr("Buang worktree ini?"), isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } })) {
             Button("Batal", role: .cancel) {}
             if let p = pending { Button("Buang", role: .destructive) { hub.remove([p]) } }
         } message: {
@@ -489,6 +489,7 @@ struct DevView: View {
 // MARK: menu bar
 
 struct MenuBarContent: View {
+    @ObservedObject private var lang = Lang.shared
     @EnvironmentObject var hub: HubState
     @EnvironmentObject var state: AppState
     @Environment(\.openWindow) private var openWindow

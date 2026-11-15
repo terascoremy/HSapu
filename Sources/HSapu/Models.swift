@@ -38,7 +38,7 @@ struct Theme: Equatable {
 
     static func == (l: Theme, r: Theme) -> Bool { l.id == r.id }
 
-    static let overview = Theme(id: "overview", a: Color(hex: 0x2E1A6B), b: Color(hex: 0x0D0A2B), glow: Color(hex: 0x7A4DFF))
+    static let overview = Theme(id: "overview", a: Color(hex: 0x6B1A5E), b: Color(hex: 0x1E0A2B), glow: Color(hex: 0xF05CC0))
 }
 
 struct CleanCategory: Identifiable {
