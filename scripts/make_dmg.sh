@@ -3,10 +3,10 @@
 set -e; cd "$(dirname "$0")/.."
 [ -f scripts/signing.env ] && source scripts/signing.env
 [ -d build/HSapu.app ] || ./build_app.sh
-NAME=HSapu; BG_TOP="#be185d"; BG_BOTTOM="#4c1d95"
+NAME=HSapu; BG_TOP="#fdf2f8"; BG_BOTTOM="#e9d5ff"; INK="#4a0d33"
 VER=$(grep -o "\"[0-9][0-9.]*\"" Sources/HSapu/Version.swift | head -1 | tr -d "\""); mkdir -p dist build
 VOL="$NAME $VER"; OUT="dist/$NAME-$VER.dmg"; RW="build/$NAME-rw.dmg"
-swift scripts/dmg_bg.swift build/dmg-bg.png "$NAME" "$BG_TOP" "$BG_BOTTOM"
+swift scripts/dmg_bg.swift build/dmg-bg.png "$NAME" "$BG_TOP" "$BG_BOTTOM" "$INK"
 STAGE=$(mktemp -d)
 cp -R build/$NAME.app "$STAGE/"; ln -s /Applications "$STAGE/Applications"
 mkdir "$STAGE/.background"; cp build/dmg-bg.png "$STAGE/.background/bg.png"
